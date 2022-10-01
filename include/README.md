@@ -16,3 +16,4 @@
 -   https://raw.githubusercontent.com/Dobiasd/FunctionalPlus/master/include_all_in_one/include/fplus/fplus.hpp
 -   https://raw.githubusercontent.com/jlblancoc/nanoflann/master/include/nanoflann.hpp
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
+-   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
