@@ -1,0 +1,3 @@
+-   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
+-   https://github.com/doctest/doctest/tree/4d8716f1efc1d14aa736ef52ee727bd4204f4c40
+-   https://github.com/district10/geojson-cpp/tree/fef5888142373cc07561987b8c8ba4bd64e2380b
