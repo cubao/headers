@@ -2,6 +2,7 @@
 -   https://github.com/district10/geojson-cpp/tree/fef5888142373cc07561987b8c8ba4bd64e2380b
 -   https://github.com/district10/geometry.hpp/tree/8949904a2b6e0295df2db09b06a643f573e714d0
 -   https://github.com/doctest/doctest/tree/4d8716f1efc1d14aa736ef52ee727bd4204f4c40
+-   https://github.com/gabime/spdlog/tree/v1.x/include/spdlog
 -   https://github.com/mapbox/protozero/tree/85db94025f60fb5d746005f97360094c1fe9c9be
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
