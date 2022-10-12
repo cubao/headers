@@ -60,7 +60,6 @@ geometry convert<geometry>(const rapidjson_value &json) {
 
     const auto &type = type_itr->value;
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     prop_map custom_properties;
     for (auto& m : json.GetObject()) {
         auto key = std::string(m.name.GetString(), m.name.GetStringLength());
@@ -71,7 +70,6 @@ geometry convert<geometry>(const rapidjson_value &json) {
         }
         custom_properties.emplace(key, convert<value>(m.value));
     }
-#endif
 
     if (type == "GeometryCollection") {
         const auto &geometries_itr = json.FindMember("geometries");
@@ -83,13 +81,9 @@ geometry convert<geometry>(const rapidjson_value &json) {
         if (!json_geometries.IsArray())
             throw error("GeometryCollection geometries property must be an array");
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
         auto ret = geometry{ convert<geometry_collection>(json_geometries) };
         ret.custom_properties = std::move(custom_properties);
         return ret;
-#else
-        return geometry{ convert<geometry_collection>(json_geometries) };
-#endif
     }
 
     const auto &coords_itr = json.FindMember("coordinates");
@@ -101,7 +95,6 @@ geometry convert<geometry>(const rapidjson_value &json) {
     if (!json_coords.IsArray())
         throw error("coordinates property must be an array");
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     geometry ret;
     if (type == "Point")
         ret = geometry{ convert<point>(json_coords) };
@@ -119,22 +112,6 @@ geometry convert<geometry>(const rapidjson_value &json) {
         throw error(std::string(type.GetString()) + " not yet implemented");
     ret.custom_properties = std::move(custom_properties);
     return ret;
-#else
-    if (type == "Point")
-        return geometry{ convert<point>(json_coords) };
-    if (type == "MultiPoint")
-        return geometry{ convert<multi_point>(json_coords) };
-    if (type == "LineString")
-        return geometry{ convert<line_string>(json_coords) };
-    if (type == "MultiLineString")
-        return geometry{ convert<multi_line_string>(json_coords) };
-    if (type == "Polygon")
-        return geometry{ convert<polygon>(json_coords) };
-    if (type == "MultiPolygon")
-        return geometry{ convert<multi_polygon>(json_coords) };
-
-    throw error(std::string(type.GetString()) + " not yet implemented");
-#endif
 }
 
 template <>
@@ -224,7 +201,6 @@ feature convert<feature>(const rapidjson_value &json) {
         }
     }
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     for (auto& m : json.GetObject()) {
         auto key = std::string(m.name.GetString(), m.name.GetStringLength());
         if (key == "type" || key == "geometry" || key == "properties" || key == "id") {
@@ -232,7 +208,6 @@ feature convert<feature>(const rapidjson_value &json) {
         }
         result.custom_properties.emplace(key, convert<value>(m.value));
     }
-#endif
 
     return result;
 }
@@ -269,7 +244,6 @@ geojson convert<geojson>(const rapidjson_value &json) {
             collection.push_back(convert<feature>(feature_obj));
         }
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
         for (auto& m : json.GetObject()) {
             auto key = std::string(m.name.GetString(), m.name.GetStringLength());
             if (key == "type" || key == "features") {
@@ -277,7 +251,6 @@ geojson convert<geojson>(const rapidjson_value &json) {
             }
             collection.custom_properties.emplace(key, convert<value>(m.value));
         }
-#endif
         return geojson{ collection };
     }
 
@@ -473,7 +446,6 @@ rapidjson_value convert<geometry>(const geometry& element, rapidjson_allocator& 
         geometry::visit(element, to_coordinates_or_geometries { allocator }),
         allocator);
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     auto visitor = to_value{ allocator };
     for (auto &pair : element.custom_properties) {
         result.AddMember(
@@ -482,7 +454,6 @@ rapidjson_value convert<geometry>(const geometry& element, rapidjson_allocator& 
             value::visit(pair.second, visitor), //
             allocator);
     }
-#endif
 
     return result;
 }
@@ -499,7 +470,6 @@ rapidjson_value convert<feature>(const feature& element, rapidjson_allocator& al
     result.AddMember("geometry", convert(element.geometry, allocator), allocator);
     result.AddMember("properties", to_value { allocator }(element.properties), allocator);
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     auto visitor = to_value{ allocator };
     for (auto &pair : element.custom_properties) {
         result.AddMember(
@@ -507,7 +477,6 @@ rapidjson_value convert<feature>(const feature& element, rapidjson_allocator& al
                                                rapidjson::SizeType(pair.first.size()) },
             value::visit(pair.second, visitor), allocator);
     }
-#endif
 
     return result;
 }
@@ -523,7 +492,6 @@ rapidjson_value convert<feature_collection>(const feature_collection& collection
     }
     result.AddMember("features", features, allocator);
 
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     auto visitor = to_value{ allocator };
     for (auto &pair : collection.custom_properties) {
         result.AddMember(
@@ -531,7 +499,6 @@ rapidjson_value convert<feature_collection>(const feature_collection& collection
                                                rapidjson::SizeType(pair.first.size()) },
             value::visit(pair.second, visitor), allocator);
     }
-#endif
 
     return result;
 }

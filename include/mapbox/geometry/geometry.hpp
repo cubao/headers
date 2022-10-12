@@ -122,10 +122,7 @@ struct geometry : geometry_base<T, Cont>
 {
     using coordinate_type = T;
     using geometry_base<T>::geometry_base;
-
-#if MAPBOX_GEOMETRY_ENABLE_CUSTOM_PROPERTIES
     property_map custom_properties;
-#endif
 };
 
 template <typename T, template <typename...> class Cont>
