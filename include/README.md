@@ -9,6 +9,7 @@
 -   https://github.com/gabime/spdlog/tree/v1.x/include/spdlog
 -   https://github.com/libigl/libigl (no copyleft code)
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
+-   https://github.com/mapbox/gzip-hpp
 -   https://github.com/mapbox/protozero/tree/85db94025f60fb5d746005f97360094c1fe9c9be
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
 -   https://github.com/nlohmann/json/releases/tag/v3.11.2
