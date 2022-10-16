@@ -11,6 +11,7 @@
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
 -   https://github.com/mapbox/protozero/tree/85db94025f60fb5d746005f97360094c1fe9c9be
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
+-   https://github.com/nlohmann/json/releases/tag/v3.11.2
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
 -   https://github.com/taskflow/taskflow
 -   https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
