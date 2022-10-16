@@ -64,6 +64,26 @@ macro(setup_git_diff_name_only)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
 
+macro(extract_version_from_changelog)
+    execute_process(
+        COMMAND bash "-c" "grep -m1 -E '^# v[0-9]+\.[0-9]+\.[0-9]+.*' CHANGELOG.md | cut -c 4-"
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        OUTPUT_VARIABLE VERSION_FULL
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(VERSION_FULL STREQUAL "")
+        set(VERSION_FULL "0.0.1_invalid_version")
+    endif()
+    string(
+        REGEX MATCH
+              "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(.*)"
+              VERSION_MATCHED
+              ${VERSION_FULL})
+    set(VERSION_MAJOR ${CMAKE_MATCH_1})
+    set(VERSION_MINOR ${CMAKE_MATCH_2})
+    set(VERSION_PATCH ${CMAKE_MATCH_3})
+    set(VERSION_SUFFIX ${CMAKE_MATCH_4})
+endmacro()
+
 macro(setup_username_hostname)
     execute_process(
         COMMAND bash "-c" "echo $(id -u -n)@$(hostname) | tr '\n' ' '"
