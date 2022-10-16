@@ -59,6 +59,10 @@ struct feature
           properties(std::move(prop_)),
           id(std::move(id_)),
           custom_properties(std::move(custom_prop_)) {}
+    feature(geometry_type&& geom_, property_map&& prop_, property_map&& custom_prop_)
+        : geometry(std::move(geom_)),
+          properties(std::move(prop_)),
+          custom_properties(std::move(custom_prop_)) {}
 };
 
 template <class T>
