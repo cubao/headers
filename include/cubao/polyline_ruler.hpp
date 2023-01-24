@@ -284,6 +284,12 @@ struct PolylineRuler
         }
         return *ranges_;
     }
+    double range(int seg_idx) const { return ranges()[seg_idx]; }
+    double range(int seg_idx, double t) const
+    {
+        auto &ranges = this->ranges();
+        return ranges[seg_idx] * (1.0 - t) + ranges[seg_idx + 1] * t;
+    }
 
     double length() const { return ranges()[N_ - 1]; }
 
@@ -384,6 +390,15 @@ struct PolylineRuler
         double t = (range - ranges[i]) / (ranges[i + 1] - ranges[i]);
         return interpolate(polyline_.row(i), polyline_.row(i + 1), t,
                            is_wgs84_);
+    }
+
+    Eigen::Vector3d at(double range) const { return extended_along(range); }
+    Eigen::Vector3d at(int seg_idx) const { return polyline_.row(seg_idx); }
+    Eigen::Vector3d at(int seg_idx, double t) const
+    {
+        return interpolate(polyline_.row(seg_idx),     //
+                           polyline_.row(seg_idx + 1), //
+                           t, is_wgs84_);
     }
 
     std::pair<Eigen::Vector3d, Eigen::Vector3d>
