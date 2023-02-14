@@ -16,6 +16,7 @@
 -   https://github.com/nlohmann/json/releases/tag/v3.11.2
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
 -   https://github.com/taskflow/taskflow
+-   https://github.com/yuki-koyama/tinycolormap
 -   https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
 -   https://raw.githubusercontent.com/Dobiasd/FunctionalPlus/master/include_all_in_one/include/fplus/fplus.hpp
 -   https://raw.githubusercontent.com/adamyaxley/Obfuscate/master/obfuscate.h
