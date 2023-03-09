@@ -1,4 +1,5 @@
 -   https://github.com/Neargye/magic_enum
+-   https://github.com/Neargye/nameof
 -   https://github.com/TartanLlama/optional
 -   https://github.com/Tencent/rapidjson/tree/00dbcf2c6e03c47d6c399338b6de060c71356464
 -   https://github.com/district10/geojson-cpp/tree/fef5888142373cc07561987b8c8ba4bd64e2380b
