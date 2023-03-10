@@ -93,6 +93,9 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
              py::overload_cast<int, double>(&PolylineRuler::range, py::const_),
              py::kw_only(), "segment_index"_a, "t"_a)
         //
+        .def("segment_index", &PolylineRuler::segment_index, "range"_a)
+        .def("segment_index_t", &PolylineRuler::segment_index_t, "range"_a)
+        //
         .def("length", &PolylineRuler::length)
         //
         .def_static(
@@ -103,17 +106,19 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
         .def("dirs", py::overload_cast<>(&PolylineRuler::dirs, py::const_),
              rvp::reference_internal)
         //
+        .def("dir", py::overload_cast<int>(&PolylineRuler::dir, py::const_),
+             py::kw_only(), "point_index"_a)
         .def("dir",
              py::overload_cast<double, bool>(&PolylineRuler::dir, py::const_),
-             "range"_a, py::kw_only(), "smooth_joint"_a = true)
+             py::kw_only(), "range"_a, "smooth_joint"_a = true)
         .def("extended_along", &PolylineRuler::extended_along, "range"_a)
         .def("at", py::overload_cast<double>(&PolylineRuler::at, py::const_),
-             "range"_a)
+             py::kw_only(), "range"_a)
         .def("at", py::overload_cast<int>(&PolylineRuler::at, py::const_),
-             "segment_index"_a)
+             py::kw_only(), "segment_index"_a)
         .def("at",
              py::overload_cast<int, double>(&PolylineRuler::at, py::const_),
-             "segment_index"_a, py::kw_only(), "t"_a)
+             py::kw_only(), "segment_index"_a, "t"_a)
         .def("arrow", &PolylineRuler::arrow, "range"_a, //
              py::kw_only(), "smooth_joint"_a = true)
         .def("arrows",
@@ -201,5 +206,63 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
                     "A"_a, "B"_a, py::kw_only(), "t"_a, "is_wgs84"_a = false)
         //
         ;
+
+    m.def(
+         "douglas_simplify",
+         [](const RowVectors &coords, double epsilon, //
+            bool is_wgs84,                            //
+            bool recursive,                           //
+            const std::string &return_type)
+             -> std::variant<Eigen::VectorXi, RowVectors> {
+             if (return_type == "coords") {
+                 return douglas_simplify(coords, epsilon, is_wgs84, recursive);
+             } else if (return_type == "mask") {
+                 return douglas_simplify_mask(coords, epsilon, is_wgs84,
+                                              recursive);
+             } else if (return_type == "indexes") {
+                 return douglas_simplify_indexes(coords, epsilon, is_wgs84,
+                                                 recursive);
+             } else {
+                 throw std::invalid_argument(
+                     "invalid return_type:" + return_type +
+                     ", should be 'coords' (default), 'mask' or 'indexes'");
+             }
+         },
+         "coords"_a, "epsilon"_a, py::kw_only(), //
+         "is_wgs84"_a = false,                   //
+         "recursive"_a = true,                   //
+         "return_type"_a = "coords",             //
+         "return_type can be 'coords', 'mask', 'indexes'")
+        .def(
+            "douglas_simplify",
+            [](const Eigen::Ref<const RowVectorsNx2> &coords_,
+               double epsilon, //
+               bool is_wgs84,  //
+               bool recursive, //
+               const std::string &return_type)
+                -> std::variant<Eigen::VectorXi, RowVectorsNx2> {
+                auto coords = to_Nx3(coords_);
+                if (return_type == "coords") {
+                    RowVectorsNx2 ret =
+                        douglas_simplify(coords, epsilon, is_wgs84, recursive)
+                            .leftCols(2);
+                    return ret;
+                } else if (return_type == "mask") {
+                    return douglas_simplify_mask(coords, epsilon, is_wgs84,
+                                                 recursive);
+                } else if (return_type == "indexes") {
+                    return douglas_simplify_indexes(coords, epsilon, is_wgs84,
+                                                    recursive);
+                } else {
+                    throw std::invalid_argument(
+                        "invalid return_type:" + return_type +
+                        ", should be 'coords' (default), 'mask' or 'indexes'");
+                }
+            },
+            "coords"_a, "epsilon"_a, py::kw_only(), //
+            "is_wgs84"_a = false,                   //
+            "recursive"_a = true,                   //
+            "return_type"_a = "coords",             //
+            "return_type can be 'coords', 'mask', 'indexes'");
 }
 } // namespace cubao
