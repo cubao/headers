@@ -207,6 +207,7 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
         //
         ;
 
+    /*
     m.def(
          "douglas_simplify",
          [](const RowVectors &coords, double epsilon, //
@@ -264,5 +265,6 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
             "recursive"_a = true,                   //
             "return_type"_a = "coords",             //
             "return_type can be 'coords', 'mask', 'indexes'");
+    */
 }
 } // namespace cubao
