@@ -28,7 +28,7 @@ template <typename TCoord> class FlatBush
 
     struct Box
     {
-        size_t Index;
+        int Index;
         TCoord MinX;
         TCoord MinY;
         TCoord MaxX;
@@ -40,22 +40,22 @@ template <typename TCoord> class FlatBush
         }
     };
 
-    size_t NodeSize = 16;
+    int NodeSize = 16;
 
     FlatBush();
     FlatBush(int N) { Reserve(N); }
-    void Reserve(size_t size); // Calling this before calling
+    void Reserve(int size); // Calling this before calling
                                // add(),add()...finish() is an optimization
-    size_t Add(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY,
+    int Add(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY,
                int label0 = -1,
                int label1 = -1); // Add an item, and return it's index
-    size_t Add(const Eigen::Ref<const PolylineType> &polyline, int label0 = -1);
+    int Add(const Eigen::Ref<const PolylineType> &polyline, int label0 = -1);
     void Finish(); // Build the index
     void Search(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY,
-                std::vector<size_t> &results) const; // Search for items
-    std::vector<size_t> Search(TCoord minX, TCoord minY, TCoord maxX,
+                std::vector<int> &results) const; // Search for items
+    std::vector<int> Search(TCoord minX, TCoord minY, TCoord maxX,
                                TCoord maxY) const; // Search for items
-    size_t Size() const { return NumItems; }
+    int Size() const { return NumItems; }
 
     Eigen::Map<const BoxesType> boxes() const
     {
@@ -67,8 +67,8 @@ template <typename TCoord> class FlatBush
         return Eigen::Map<const LabelsType>(&Labels[0][0], Labels.size(), 2);
     }
 
-    Eigen::Vector4d box(size_t index) const { return raw_Boxes[index]; }
-    Eigen::Vector2i label(size_t index) const { return Labels[index]; }
+    Eigen::Vector4d box(int index) const { return raw_Boxes[index]; }
+    Eigen::Vector2i label(int index) const { return Labels[index]; }
 
   private:
     std::vector<Box> Boxes;
@@ -76,12 +76,12 @@ template <typename TCoord> class FlatBush
     std::vector<LabelType, Eigen::aligned_allocator<LabelType>> Labels;
     Box Bounds;
     std::vector<uint32_t> HilbertValues;
-    std::vector<size_t> LevelBounds;
-    size_t NumItems = 0;
+    std::vector<int> LevelBounds;
+    int NumItems = 0;
 
     static Box InvertedBox();
-    static void Sort(uint32_t *hilbertValues, Box *boxes, size_t left,
-                     size_t right);
+    static void Sort(uint32_t *hilbertValues, Box *boxes, int left,
+                     int right);
 };
 
 template <typename TCoord> FlatBush<TCoord>::FlatBush()
@@ -89,10 +89,10 @@ template <typename TCoord> FlatBush<TCoord>::FlatBush()
     Bounds = InvertedBox();
 }
 
-template <typename TCoord> void FlatBush<TCoord>::Reserve(size_t size)
+template <typename TCoord> void FlatBush<TCoord>::Reserve(int size)
 {
-    size_t n = size;
-    size_t numNodes = n;
+    int n = size;
+    int numNodes = n;
     do {
         n = (n + NodeSize - 1) / NodeSize;
         numNodes += n;
@@ -104,7 +104,7 @@ template <typename TCoord> void FlatBush<TCoord>::Reserve(size_t size)
 }
 
 template <typename TCoord>
-size_t FlatBush<TCoord>::Add(TCoord x0, TCoord y0, TCoord x1, TCoord y1,
+int FlatBush<TCoord>::Add(TCoord x0, TCoord y0, TCoord x1, TCoord y1,
                              int label0, int label1)
 {
     double minX = std::min(x0, x1);
@@ -119,16 +119,16 @@ size_t FlatBush<TCoord>::Add(TCoord x0, TCoord y0, TCoord x1, TCoord y1,
     Bounds.MaxX = std::max(Bounds.MaxX, maxX);
     Bounds.MaxY = std::max(Bounds.MaxY, maxY);
 
-    size_t index = Boxes.size();
+    int index = Boxes.size();
     Boxes.push_back({index, minX, minY, maxX, maxY});
     return index;
 }
 
 template <typename TCoord>
-size_t FlatBush<TCoord>::Add(const Eigen::Ref<const PolylineType> &polyline,
+int FlatBush<TCoord>::Add(const Eigen::Ref<const PolylineType> &polyline,
                              int label0)
 {
-    size_t index = Boxes.size();
+    int index = Boxes.size();
     int r = polyline.rows();
     for (int i = 0; i < r - 1; ++i) {
         auto &prev = polyline.row(i);
@@ -147,8 +147,8 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
 
     // calculate the total number of nodes in the R-tree to allocate space for
     // and the index of each tree level (used in search later)
-    size_t n = NumItems;
-    size_t numNodes = n;
+    int n = NumItems;
+    int numNodes = n;
     LevelBounds.push_back(n);
     do {
         n = (n + NodeSize - 1) / NodeSize;
@@ -164,7 +164,7 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
 
     // map item centers into Hilbert coordinate space and calculate Hilbert
     // values
-    for (size_t i = 0; i < Boxes.size(); i++) {
+    for (int i = 0; i < Boxes.size(); i++) {
         const auto &b = Boxes[i];
         uint32_t x = uint32_t(hilbertMax *
                               ((b.MinX + b.MaxX) / 2 - Bounds.MinX) / width);
@@ -178,8 +178,8 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
         Sort(&HilbertValues[0], &Boxes[0], 0, Boxes.size() - 1);
 
     // generate nodes at each tree level, bottom-up
-    for (size_t i = 0, pos = 0; i < LevelBounds.size() - 1; i++) {
-        size_t end = LevelBounds[i];
+    for (int i = 0, pos = 0; i < LevelBounds.size() - 1; i++) {
+        int end = LevelBounds[i];
 
         // generate a parent node for each block of consecutive <nodeSize> nodes
         while (pos < end) {
@@ -187,7 +187,7 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
             nodeBox.Index = pos;
 
             // calculate bbox for the new node
-            for (size_t j = 0; j < NodeSize && pos < end; j++) {
+            for (int j = 0; j < NodeSize && pos < end; j++) {
                 const auto &box = Boxes[pos++];
                 nodeBox.MinX = std::min(nodeBox.MinX, box.MinX);
                 nodeBox.MinY = std::min(nodeBox.MinY, box.MinY);
@@ -202,38 +202,38 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
 }
 
 template <typename TCoord>
-std::vector<size_t> FlatBush<TCoord>::Search(TCoord minX, TCoord minY,
+std::vector<int> FlatBush<TCoord>::Search(TCoord minX, TCoord minY,
                                              TCoord maxX, TCoord maxY) const
 {
-    std::vector<size_t> results;
+    std::vector<int> results;
     Search(minX, minY, maxX, maxY, results);
     return results;
 }
 
 template <typename TCoord>
 void FlatBush<TCoord>::Search(TCoord minX, TCoord minY, TCoord maxX,
-                              TCoord maxY, std::vector<size_t> &results) const
+                              TCoord maxY, std::vector<int> &results) const
 {
     if (LevelBounds.size() == 0) {
         // Must call Finish()
         return;
     }
 
-    std::vector<size_t> queue;
+    std::vector<int> queue;
     queue.push_back(Boxes.size() - 1);       // nodeIndex
     queue.push_back(LevelBounds.size() - 1); // level
 
     while (queue.size() != 0) {
-        size_t nodeIndex = queue[queue.size() - 2];
-        size_t level = queue[queue.size() - 1];
+        int nodeIndex = queue[queue.size() - 2];
+        int level = queue[queue.size() - 1];
         queue.pop_back();
         queue.pop_back();
 
         // find the end index of the node
-        size_t end = std::min(nodeIndex + NodeSize, LevelBounds[level]);
+        int end = std::min(nodeIndex + NodeSize, LevelBounds[level]);
 
         // search through child nodes
-        for (size_t pos = nodeIndex; pos < end; pos++) {
+        for (int pos = nodeIndex; pos < end; pos++) {
             // check if node bbox intersects with query bbox
             if (maxX < Boxes[pos].MinX || maxY < Boxes[pos].MinY ||
                 minX > Boxes[pos].MaxX || minY > Boxes[pos].MaxY) {
@@ -265,15 +265,15 @@ typename FlatBush<TCoord>::Box FlatBush<TCoord>::InvertedBox()
 
 // custom quicksort that sorts bbox data alongside the hilbert values
 template <typename TCoord>
-void FlatBush<TCoord>::Sort(uint32_t *values, Box *boxes, size_t left,
-                            size_t right)
+void FlatBush<TCoord>::Sort(uint32_t *values, Box *boxes, int left,
+                            int right)
 {
     if (left >= right)
         return;
 
     uint32_t pivot = values[(left + right) >> 1];
-    size_t i = left - 1;
-    size_t j = right + 1;
+    int i = left - 1;
+    int j = right + 1;
 
     while (true) {
         do

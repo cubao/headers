@@ -249,6 +249,7 @@ struct PolylineRuler
     const RowVectors &polyline() const { return polyline_; }
     int N() const { return N_; }
     bool is_wgs84() const { return is_wgs84_; }
+    Eigen::Vector3d k() const { return k_; }
 
     static Eigen::VectorXd ranges(const Eigen::Ref<const RowVectors> &polyline,
                                   bool is_wgs84 = false)
@@ -405,6 +406,12 @@ struct PolylineRuler
         return interpolate(polyline_.row(seg_idx),     //
                            polyline_.row(seg_idx + 1), //
                            t, is_wgs84_);
+    }
+
+    std::pair<Eigen::Vector3d, Eigen::Vector3d> arrow(int seg_idx,
+                                                      double t) const
+    {
+        return std::make_pair(at(seg_idx, t), dir(seg_idx));
     }
 
     std::pair<Eigen::Vector3d, Eigen::Vector3d>
