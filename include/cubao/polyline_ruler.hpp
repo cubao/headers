@@ -13,6 +13,7 @@
 
 #include <Eigen/Core>
 #include <optional>
+#include <queue>
 
 #include "cheap_ruler.hpp"
 #include "crs_transform.hpp"
@@ -291,6 +292,22 @@ struct PolylineRuler
         return ranges[seg_idx] * (1.0 - t) + ranges[seg_idx + 1] * t;
     }
 
+    int segment_index(double range) const
+    {
+        const double *ranges = this->ranges().data();
+        int I = std::upper_bound(ranges, ranges + N_, range) - ranges;
+        return std::min(std::max(0, I - 1), N_ - 2);
+    }
+
+    std::pair<int, double> segment_index_t(double range) const
+    {
+        const double *ranges = this->ranges().data();
+        int I = std::upper_bound(ranges, ranges + N_, range) - ranges;
+        int i = std::min(std::max(0, I - 1), N_ - 2);
+        double t = (range - ranges[i]) / (ranges[i + 1] - ranges[i]);
+        return {i, t};
+    }
+
     double length() const { return ranges()[N_ - 1]; }
 
     static RowVectors dirs(const Eigen::Ref<const RowVectors> &polyline,
@@ -352,42 +369,31 @@ struct PolylineRuler
         return *dirs_;
     }
 
+    Eigen::Vector3d dir(int pt_index) const
+    {
+        return dirs().row(std::min(pt_index, N_ - 2));
+    }
+
     Eigen::Vector3d dir(double range, bool smooth_joint = true) const
     {
+        if (!smooth_joint) {
+            return dir(segment_index(range));
+        }
+        auto [i, t] = segment_index_t(range);
         auto &dirs = this->dirs();
-        if (range <= 0.0) {
+        if (i == 0) {
             return dirs.row(0);
-        }
-        auto &ranges = this->ranges();
-        int i = 0;
-        while (i + 1 < N_ && ranges[i + 1] < range) {
-            ++i;
-        }
-        if (smooth_joint && i + 1 < N_ && ranges[i + 1] == range) {
-            Eigen::Vector3d dir = dirs.row(i + 1) + dirs.row(i);
+        } else if (t == 0) {
+            Eigen::Vector3d dir = dirs.row(i - 1) + dirs.row(i);
             return dir / dir.norm();
+        } else {
+            return dirs.row(i);
         }
-        return dirs.row(std::min(i, (int)dirs.rows() - 1));
     }
 
     Eigen::Vector3d extended_along(double range) const
     {
-        auto &ranges = this->ranges();
-        if (range <= 0.0) {
-            double t = range / ranges[1];
-            return interpolate(polyline_.row(0), polyline_.row(1), t,
-                               is_wgs84_);
-        } else if (range >= length()) {
-            double t =
-                (range - ranges[N_ - 2]) / (ranges[N_ - 1] - ranges[N_ - 2]);
-            return interpolate(polyline_.row(N_ - 2), polyline_.row(N_ - 1), t,
-                               is_wgs84_);
-        }
-        int i = 0;
-        while (i + 1 < N_ && ranges[i + 1] < range) {
-            ++i;
-        }
-        double t = (range - ranges[i]) / (ranges[i + 1] - ranges[i]);
+        auto [i, t] = segment_index_t(range);
         return interpolate(polyline_.row(i), polyline_.row(i + 1), t,
                            is_wgs84_);
     }
@@ -742,31 +748,103 @@ inline void douglas_simplify(const Eigen::Ref<const RowVectors> &coords,
     douglas_simplify(coords, to_keep, max_index, j, epsilon);
 }
 
-inline Eigen::VectorXi
-douglas_simplify_mask(const Eigen::Ref<const RowVectors> &coords,
-                      double epsilon, bool is_wgs84 = false)
+void douglas_simplify_iter(const Eigen::Ref<const RowVectors> &coords,
+                           Eigen::VectorXi &to_keep, const double epsilon)
+{
+    std::queue<std::pair<int, int>> q;
+    q.push({0, to_keep.size() - 1});
+    while (!q.empty()) {
+        int i = q.front().first;
+        int j = q.front().second;
+        q.pop();
+        to_keep[i] = to_keep[j] = 1;
+        if (j - i <= 1) {
+            continue;
+        }
+        LineSegment line(coords.row(i), coords.row(j));
+        double max_dist2 = 0.0;
+        int max_index = i;
+        for (int k = i + 1; k < j; ++k) {
+            double dist2 = line.distance2(coords.row(k));
+            if (dist2 > max_dist2) {
+                max_dist2 = dist2;
+                max_index = k;
+            }
+        }
+        if (max_dist2 <= epsilon * epsilon) {
+            continue;
+        }
+        q.push({i, max_index});
+        q.push({max_index, j});
+    }
+}
+
+inline Eigen::VectorXi douglas_simplify_mask(const RowVectors &coords,
+                                             double epsilon,        //
+                                             bool is_wgs84 = false, //
+                                             bool recursive = true)
 {
     if (is_wgs84) {
-        return douglas_simplify_mask(lla2enu(coords), epsilon, !is_wgs84);
+        return douglas_simplify_mask(lla2enu(coords), epsilon, //
+                                     false, recursive);
     }
     Eigen::VectorXi mask(coords.rows());
     mask.setZero();
-    douglas_simplify(coords, mask, 0, mask.size() - 1, epsilon);
+    if (recursive) {
+        douglas_simplify(coords, mask, 0, mask.size() - 1, epsilon);
+    } else {
+        douglas_simplify_iter(coords, mask, epsilon);
+    }
     return mask;
 }
 
-inline Eigen::VectorXi
-douglas_simplify_indexes(const Eigen::Ref<const RowVectors> &coords,
-                         double epsilon, bool is_wgs84 = false)
+inline Eigen::VectorXi douglas_simplify_indexes(const RowVectors &coords,
+                                                double epsilon,        //
+                                                bool is_wgs84 = false, //
+                                                bool recursive = true)
 {
-    return mask2indexes(douglas_simplify_mask(coords, epsilon, is_wgs84));
+    return mask2indexes(
+        douglas_simplify_mask(coords, epsilon, is_wgs84, recursive));
 }
 
-inline RowVectors douglas_simplify(const Eigen::Ref<const RowVectors> &coords,
-                                   double epsilon, bool is_wgs84 = false)
+inline RowVectors douglas_simplify(const RowVectors &coords,
+                                   double epsilon,        //
+                                   bool is_wgs84 = false, //
+                                   bool recursive = true)
 {
-    return select_by_mask(coords,
-                          douglas_simplify_mask(coords, epsilon, is_wgs84));
+    return select_by_mask(
+        coords, //
+        douglas_simplify_mask(coords, epsilon, is_wgs84, recursive));
+}
+
+// Nx2
+inline Eigen::VectorXi
+douglas_simplify_mask(const Eigen::Ref<const RowVectorsNx2> &coords,
+                      double epsilon,        //
+                      bool is_wgs84 = false, //
+                      bool recursive = true)
+{
+    return douglas_simplify_mask(to_Nx3(coords), epsilon, is_wgs84, recursive);
+}
+inline Eigen::VectorXi
+douglas_simplify_indexes(const Eigen::Ref<const RowVectorsNx2> &coords,
+                         double epsilon,        //
+                         bool is_wgs84 = false, //
+                         bool recursive = true)
+{
+    return douglas_simplify_indexes(to_Nx3(coords), epsilon, is_wgs84,
+                                    recursive);
+}
+inline RowVectorsNx2
+douglas_simplify(const Eigen::Ref<const RowVectorsNx2> &coords,
+                 double epsilon,        //
+                 bool is_wgs84 = false, //
+                 bool recursive = true)
+{
+    RowVectorsNx2 ret =
+        douglas_simplify(to_Nx3(coords), epsilon, is_wgs84, recursive)
+            .leftCols(2);
+    return ret;
 }
 
 } // namespace cubao
