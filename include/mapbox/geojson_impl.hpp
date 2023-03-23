@@ -339,6 +339,7 @@ struct to_coordinates_or_geometries {
     rapidjson_value operator()(const std::vector<E>& vector) {
         rapidjson_value result;
         result.SetArray();
+        result.Reserve(vector.size(), allocator);
         for (std::size_t i = 0; i < vector.size(); ++i) {
             result.PushBack(operator()(vector[i]), allocator);
         }
@@ -348,11 +349,10 @@ struct to_coordinates_or_geometries {
     rapidjson_value operator()(const point& element) {
         rapidjson_value result;
         result.SetArray();
+        result.Reserve(3, allocator);
         result.PushBack(element.x, allocator);
         result.PushBack(element.y, allocator);
-        if (element.z != 0) {
-            result.PushBack(element.z, allocator);
-        }
+        result.PushBack(element.z, allocator);
         return result;
     }
 

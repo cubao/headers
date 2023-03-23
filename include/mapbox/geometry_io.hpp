@@ -20,11 +20,7 @@ std::ostream& operator<<(std::ostream& os, const empty&)
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const point<T>& point)
 {
-    os << "[" << point.x << "," << point.y;
-    if (point.z != 0) {
-        os << "," << point.z;
-    }
-    os << "]";
+    os << "[" << point.x << "," << point.y << "," << point.z << "]";
     return os;
 }
 
