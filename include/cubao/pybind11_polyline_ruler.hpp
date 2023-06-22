@@ -209,7 +209,7 @@ CUBAO_INLINE void bind_polyline_ruler(py::module &m)
                                                py::const_),
              "start"_a, "stop"_a)
         .def_static("_interpolate", &PolylineRuler::interpolate, //
-                    "A"_a, "B"_a, py::kw_only(), "t"_a, "is_wgs84"_a = false)
+                    "A"_a, "B"_a, py::kw_only(), "t"_a)
         //
         ;
 
