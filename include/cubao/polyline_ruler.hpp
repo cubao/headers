@@ -15,7 +15,6 @@
 #include <optional>
 #include <queue>
 
-#include "cheap_ruler.hpp"
 #include "crs_transform.hpp"
 #include "eigen_helpers.hpp"
 
@@ -224,7 +223,7 @@ struct PolylineRuler
         : polyline_(polyline),                        //
           N_(polyline.rows()),                        //
           is_wgs84_(is_wgs84),                        //
-          k_(is_wgs84 ? CheapRuler::k(polyline(0, 1)) //
+          k_(is_wgs84 ? cheap_ruler_k(polyline(0, 1)) //
                       : Eigen::Vector3d::Ones())
     {
     }
@@ -244,6 +243,7 @@ struct PolylineRuler
     // cache
     mutable std::optional<Eigen::VectorXd> ranges_;
     mutable std::optional<RowVectors> dirs_;
+    mutable std::optional<RowVectors> enus_; // only when is_wgs84==true
 
   public:
     const RowVectors &polyline() const { return polyline_; }
@@ -370,6 +370,49 @@ struct PolylineRuler
         return *dirs_;
     }
 
+  private:
+    const RowVectors &enus() const
+    {
+        assert(is_wgs84_);
+        if (!enus_) {
+            enus_ = __lla2enu(polyline_);
+        }
+        return *enus_;
+    }
+    Eigen::Vector3d __enu2lla(const Eigen::Vector3d &enu) const
+    {
+        return (enu.array() / k_.array()) + Eigen::Array3d(polyline_(0, 0),
+                                                           polyline_(0, 1),
+                                                           polyline_(0, 2));
+    }
+    Eigen::Vector3d __lla2enu(const Eigen::Vector3d &lla) const
+    {
+        return k_.array() * (lla - Eigen::Vector3d(polyline_(0, 0), //
+                                                   polyline_(0, 1), //
+                                                   polyline_(0, 2)))
+                                .array();
+    }
+
+    RowVectors __enu2lla(const RowVectors &enus) const
+    {
+        RowVectors llas = enus;
+        for (int i = 0; i < 3; ++i) {
+            llas.col(i).array() /= k_[i];
+            llas.col(i).array() += polyline_(0, i);
+        }
+        return llas;
+    }
+    RowVectors __lla2enu(const RowVectors &llas) const
+    {
+        RowVectors enus = llas;
+        for (int i = 0; i < 3; ++i) {
+            enus.col(i).array() -= polyline_(0, i);
+            enus.col(i).array() *= k_[i];
+        }
+        return enus;
+    }
+
+  public:
     Eigen::Vector3d dir(int pt_index) const
     {
         return dirs().row(std::min(pt_index, N_ - 2));
@@ -395,8 +438,7 @@ struct PolylineRuler
     Eigen::Vector3d extended_along(double range) const
     {
         auto [i, t] = segment_index_t(range);
-        return interpolate(polyline_.row(i), polyline_.row(i + 1), t,
-                           is_wgs84_);
+        return interpolate(polyline_.row(i), polyline_.row(i + 1), t);
     }
 
     Eigen::Vector3d at(double range) const { return extended_along(range); }
@@ -405,7 +447,7 @@ struct PolylineRuler
     {
         return interpolate(polyline_.row(seg_idx),     //
                            polyline_.row(seg_idx + 1), //
-                           t, is_wgs84_);
+                           t);
     }
 
     std::pair<Eigen::Vector3d, Eigen::Vector3d> arrow(int seg_idx,
@@ -432,7 +474,8 @@ struct PolylineRuler
             xyzs.row(i) = arrow.first;
             dirs.row(i) = arrow.second;
         }
-        return std::make_tuple(std::move(ranges), std::move(xyzs),
+        return std::make_tuple(std::move(ranges), //
+                               std::move(xyzs),   //
                                std::move(dirs));
     }
 
@@ -536,7 +579,8 @@ struct PolylineRuler
     }
     Eigen::Vector3d along(double dist) const
     {
-        return along(polyline_, dist, is_wgs84_);
+        return is_wgs84_ ? __enu2lla(along(enus(), dist))
+                         : along(polyline_, dist);
     }
 
     static double pointToSegmentDistance(const Eigen::Vector3d &p,
@@ -609,7 +653,11 @@ struct PolylineRuler
     std::tuple<Eigen::Vector3d, int, double>
     pointOnLine(const Eigen::Vector3d &p) const
     {
-        return pointOnLine(polyline_, p, is_wgs84_);
+        if (!is_wgs84_) {
+            return pointOnLine(polyline_, p);
+        }
+        auto [enu, i, t] = pointOnLine(enus(), __lla2enu(p));
+        return std::make_tuple(__enu2lla(enu), i, t);
     }
 
     static RowVectors lineSlice(const Eigen::Vector3d &start,
@@ -668,7 +716,10 @@ struct PolylineRuler
     RowVectors lineSlice(const Eigen::Vector3d &start,
                          const Eigen::Vector3d &stop) const
     {
-        return lineSlice(start, stop, polyline_, is_wgs84_);
+        if (!is_wgs84_) {
+            return lineSlice(start, stop, polyline_);
+        }
+        return __enu2lla(lineSlice(__lla2enu(start), __lla2enu(stop), enus()));
     }
 
     static RowVectors lineSliceAlong(double start, double stop,
@@ -709,23 +760,15 @@ struct PolylineRuler
     }
     RowVectors lineSliceAlong(double start, double stop) const
     {
-        return lineSliceAlong(start, stop, polyline_, is_wgs84_);
+        if (!is_wgs84_) {
+            return lineSliceAlong(start, stop, polyline_);
+        }
+        return __enu2lla(lineSliceAlong(start, stop, enus()));
     }
 
     static Eigen::Vector3d interpolate(const Eigen::Vector3d &a,
-                                       const Eigen::Vector3d &b, double t,
-                                       bool is_wgs84 = false)
+                                       const Eigen::Vector3d &b, double t)
     {
-        if (is_wgs84) {
-            RowVectors llas(2, 3);
-            llas.row(0) = a;
-            llas.row(1) = b;
-            auto enus = lla2enu(llas);
-            return enu2lla(interpolate(enus.row(0), enus.row(1), t, !is_wgs84)
-                               .transpose(),
-                           llas.row(0))
-                .row(0);
-        }
         return a + (b - a) * t;
     }
 };
@@ -755,8 +798,9 @@ inline void douglas_simplify(const Eigen::Ref<const RowVectors> &coords,
     douglas_simplify(coords, to_keep, max_index, j, epsilon);
 }
 
-void douglas_simplify_iter(const Eigen::Ref<const RowVectors> &coords,
-                           Eigen::VectorXi &to_keep, const double epsilon)
+inline void douglas_simplify_iter(const Eigen::Ref<const RowVectors> &coords,
+                                  Eigen::VectorXi &to_keep,
+                                  const double epsilon)
 {
     std::queue<std::pair<int, int>> q;
     q.push({0, to_keep.size() - 1});

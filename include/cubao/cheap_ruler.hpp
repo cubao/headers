@@ -16,13 +16,18 @@
 #include <Eigen/Core>
 
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <array>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#define _USE_MATH_DEFINES
+#include <cmath>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace cubao
 {
@@ -41,6 +46,7 @@ using polygon = RowVectors;
 class CheapRuler
 {
 
+  public:
     // Values that define WGS84 ellipsoid model of the Earth
     static constexpr double RE = 6378.137;            // equatorial radius
     static constexpr double FE = 1.0 / 298.257223563; // flattening
@@ -48,7 +54,6 @@ class CheapRuler
     static constexpr double E2 = FE * (2 - FE);
     static constexpr double RAD = M_PI / 180.0;
 
-  public:
     enum Unit
     {
         Kilometers,
@@ -160,7 +165,7 @@ class CheapRuler
     //
     // Returns the bearing between two points in angles.
     //        0
-    //   45         45
+    //   -45         45
     // -90              90
     // -135         135
     //       180
@@ -472,14 +477,15 @@ class CheapRuler
         return point(a[0] + dx * t, a[1] + dy * t, a[2] + dz * t);
     }
 
-  private:
-    double ky;
-    double kx;
-    double kz;
     static double longDiff(double a, double b)
     {
         return std::remainder(a - b, 360);
     }
+
+  private:
+    double ky;
+    double kx;
+    double kz;
 };
 
 } // namespace cheap_ruler
