@@ -375,7 +375,7 @@ struct PolylineRuler
     {
         assert(is_wgs84_);
         if (!enus_) {
-            enus_ = lla2enu(polyline_);
+            enus_ = __lla2enu(polyline_);
         }
         return *enus_;
     }
