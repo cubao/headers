@@ -14,6 +14,7 @@
 -   https://github.com/mapbox/gzip-hpp
 -   https://github.com/mapbox/protozero/tree/85db94025f60fb5d746005f97360094c1fe9c9be
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
+-   https://github.com/mapbox/wagyu
 -   https://github.com/nlohmann/json/releases/tag/v3.11.2
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
 -   https://github.com/taskflow/taskflow
@@ -23,5 +24,8 @@
 -   https://raw.githubusercontent.com/adamyaxley/Obfuscate/master/obfuscate.h
 -   https://raw.githubusercontent.com/jlblancoc/nanoflann/master/include/nanoflann.hpp
 -   https://raw.githubusercontent.com/mapbox/eternal/master/include/mapbox/eternal.hpp
+-   https://raw.githubusercontent.com/mapbox/polylabel/master/include/mapbox/polylabel.hpp
+-   https://raw.githubusercontent.com/mapbox/supercluster.hpp/master/include/supercluster.hpp
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
+-   https://raw.githubusercontent.com/mourner/kdbush.hpp/master/include/kdbush.hpp
 -   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
