@@ -1,3 +1,8 @@
+// should sync
+// - https://github.com/cubao/fast-crossing/blob/master/src/densify_polyline.hpp
+// -
+// https://github.com/cubao/headers/tree/main/include/cubao/densify_polyline.hpp
+
 #ifndef CUBAO_DENSIFY_POLYLINE_HPP
 #define CUBAO_DENSIFY_POLYLINE_HPP
 
@@ -5,6 +10,7 @@
 
 namespace cubao
 {
+using RowVectors = Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>;
 inline RowVectors densify_polyline(const Eigen::Ref<const RowVectors> &coords,
                                    double max_gap)
 {

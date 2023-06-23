@@ -1,3 +1,7 @@
+// should sync
+// - https://github.com/cubao/fast-crossing/blob/master/src/flatbush.h
+// - https://github.com/cubao/headers/tree/main/include/cubao/flatbush.h
+
 #pragma once
 
 // based on https://github.com/IMQS/flatbush/blob/master/flatbush.h
@@ -35,8 +39,8 @@ template <typename TCoord> class FlatBush
         TCoord MaxY;
         bool PositiveUnion(const Box &b) const
         {
-            return b.MaxX >= MinX && b.MinX <= MaxX && b.MaxY >= MinY &&
-                   b.MinY <= MaxY;
+            return b.MaxX >= MinX && b.MinX <= MaxX && //
+                   b.MaxY >= MinY && b.MinY <= MaxY;
         }
     };
 
@@ -45,16 +49,17 @@ template <typename TCoord> class FlatBush
     FlatBush();
     FlatBush(int N) { Reserve(N); }
     void Reserve(int size); // Calling this before calling
-                               // add(),add()...finish() is an optimization
-    int Add(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY,
-               int label0 = -1,
-               int label1 = -1); // Add an item, and return it's index
+                            // add(),add()...finish() is an optimization
+    int Add(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY, //
+            int label0 = -1,
+            int label1 = -1); // Add an item, and return it's index
     int Add(const Eigen::Ref<const PolylineType> &polyline, int label0 = -1);
-    void Finish(); // Build the index
-    void Search(TCoord minX, TCoord minY, TCoord maxX, TCoord maxY,
-                std::vector<int> &results) const; // Search for items
-    std::vector<int> Search(TCoord minX, TCoord minY, TCoord maxX,
-                               TCoord maxY) const; // Search for items
+    void Finish();                        // Build the index
+    void Search(TCoord minX, TCoord minY, //
+                TCoord maxX, TCoord maxY,
+                std::vector<int> &results) const;     // Search for items
+    std::vector<int> Search(TCoord minX, TCoord minY, // Search for items
+                            TCoord maxX, TCoord maxY) const;
     int Size() const { return NumItems; }
 
     Eigen::Map<const BoxesType> boxes() const
@@ -80,8 +85,7 @@ template <typename TCoord> class FlatBush
     int NumItems = 0;
 
     static Box InvertedBox();
-    static void Sort(uint32_t *hilbertValues, Box *boxes, int left,
-                     int right);
+    static void Sort(uint32_t *hilbertValues, Box *boxes, int left, int right);
 };
 
 template <typename TCoord> FlatBush<TCoord>::FlatBush()
@@ -105,7 +109,7 @@ template <typename TCoord> void FlatBush<TCoord>::Reserve(int size)
 
 template <typename TCoord>
 int FlatBush<TCoord>::Add(TCoord x0, TCoord y0, TCoord x1, TCoord y1,
-                             int label0, int label1)
+                          int label0, int label1)
 {
     double minX = std::min(x0, x1);
     double maxX = std::max(x0, x1);
@@ -126,7 +130,7 @@ int FlatBush<TCoord>::Add(TCoord x0, TCoord y0, TCoord x1, TCoord y1,
 
 template <typename TCoord>
 int FlatBush<TCoord>::Add(const Eigen::Ref<const PolylineType> &polyline,
-                             int label0)
+                          int label0)
 {
     int index = Boxes.size();
     int r = polyline.rows();
@@ -202,8 +206,8 @@ template <typename TCoord> void FlatBush<TCoord>::Finish()
 }
 
 template <typename TCoord>
-std::vector<int> FlatBush<TCoord>::Search(TCoord minX, TCoord minY,
-                                             TCoord maxX, TCoord maxY) const
+std::vector<int> FlatBush<TCoord>::Search(TCoord minX, TCoord minY, //
+                                          TCoord maxX, TCoord maxY) const
 {
     std::vector<int> results;
     Search(minX, minY, maxX, maxY, results);
@@ -211,8 +215,9 @@ std::vector<int> FlatBush<TCoord>::Search(TCoord minX, TCoord minY,
 }
 
 template <typename TCoord>
-void FlatBush<TCoord>::Search(TCoord minX, TCoord minY, TCoord maxX,
-                              TCoord maxY, std::vector<int> &results) const
+void FlatBush<TCoord>::Search(TCoord minX, TCoord minY, //
+                              TCoord maxX, TCoord maxY,
+                              std::vector<int> &results) const
 {
     if (LevelBounds.size() == 0) {
         // Must call Finish()
@@ -265,8 +270,7 @@ typename FlatBush<TCoord>::Box FlatBush<TCoord>::InvertedBox()
 
 // custom quicksort that sorts bbox data alongside the hilbert values
 template <typename TCoord>
-void FlatBush<TCoord>::Sort(uint32_t *values, Box *boxes, int left,
-                            int right)
+void FlatBush<TCoord>::Sort(uint32_t *values, Box *boxes, int left, int right)
 {
     if (left >= right)
         return;
