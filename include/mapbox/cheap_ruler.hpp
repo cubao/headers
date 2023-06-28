@@ -128,7 +128,7 @@ public:
     //
     // Returns the bearing between two points in angles.
     //        0
-    //   45         45
+    //  -45         45
     // -90              90
     // -135         135
     //       180
