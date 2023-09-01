@@ -21,6 +21,7 @@
 -   https://github.com/taskflow/taskflow
 -   https://github.com/yuki-koyama/tinycolormap
 -   https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
+-   https://nemequ.github.io/hedley/
 -   https://raw.githubusercontent.com/Dobiasd/FunctionalPlus/master/include_all_in_one/include/fplus/fplus.hpp
 -   https://raw.githubusercontent.com/adamyaxley/Obfuscate/master/obfuscate.h
 -   https://raw.githubusercontent.com/jlblancoc/nanoflann/master/include/nanoflann.hpp
@@ -30,3 +31,4 @@
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
 -   https://raw.githubusercontent.com/mourner/kdbush.hpp/master/include/kdbush.hpp
 -   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
+
