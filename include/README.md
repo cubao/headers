@@ -9,6 +9,7 @@
 -   https://github.com/dpilger26/NumCpp
 -   https://github.com/felixguendling/cista
 -   https://github.com/gabime/spdlog/tree/v1.x/include/spdlog
+-   https://github.com/lava/matplotlib-cpp
 -   https://github.com/libigl/libigl (no copyleft code)
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
 -   https://github.com/mapbox/geojson-vt-cpp
@@ -32,4 +33,3 @@
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
 -   https://raw.githubusercontent.com/mourner/kdbush.hpp/master/include/kdbush.hpp
 -   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
-
