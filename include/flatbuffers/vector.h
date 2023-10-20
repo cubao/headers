@@ -27,8 +27,7 @@ struct String;
 
 // An STL compatible iterator implementation for Vector below, effectively
 // calling Get() for every element.
-template<typename T, typename IT, typename Data = uint8_t *,
-         typename SizeT = uoffset_t>
+template<typename T, typename IT, typename Data = uint8_t *>
 struct VectorIterator {
   typedef std::random_access_iterator_tag iterator_category;
   typedef IT value_type;
@@ -36,9 +35,8 @@ struct VectorIterator {
   typedef IT *pointer;
   typedef IT &reference;
 
-  static const SizeT element_stride = IndirectHelper<T>::element_stride;
-
-  VectorIterator(Data data, SizeT i) : data_(data + element_stride * i) {}
+  VectorIterator(Data data, uoffset_t i)
+      : data_(data + IndirectHelper<T>::element_stride * i) {}
   VectorIterator(const VectorIterator &other) : data_(other.data_) {}
   VectorIterator() : data_(nullptr) {}
 
@@ -65,7 +63,7 @@ struct VectorIterator {
   }
 
   difference_type operator-(const VectorIterator &other) const {
-    return (data_ - other.data_) / element_stride;
+    return (data_ - other.data_) / IndirectHelper<T>::element_stride;
   }
 
   // Note: return type is incompatible with the standard
@@ -77,42 +75,44 @@ struct VectorIterator {
   IT operator->() const { return IndirectHelper<T>::Read(data_, 0); }
 
   VectorIterator &operator++() {
-    data_ += element_stride;
+    data_ += IndirectHelper<T>::element_stride;
     return *this;
   }
 
   VectorIterator operator++(int) {
     VectorIterator temp(data_, 0);
-    data_ += element_stride;
+    data_ += IndirectHelper<T>::element_stride;
     return temp;
   }
 
-  VectorIterator operator+(const SizeT &offset) const {
-    return VectorIterator(data_ + offset * element_stride, 0);
+  VectorIterator operator+(const uoffset_t &offset) const {
+    return VectorIterator(data_ + offset * IndirectHelper<T>::element_stride,
+                          0);
   }
 
-  VectorIterator &operator+=(const SizeT &offset) {
-    data_ += offset * element_stride;
+  VectorIterator &operator+=(const uoffset_t &offset) {
+    data_ += offset * IndirectHelper<T>::element_stride;
     return *this;
   }
 
   VectorIterator &operator--() {
-    data_ -= element_stride;
+    data_ -= IndirectHelper<T>::element_stride;
     return *this;
   }
 
   VectorIterator operator--(int) {
     VectorIterator temp(data_, 0);
-    data_ -= element_stride;
+    data_ -= IndirectHelper<T>::element_stride;
     return temp;
   }
 
-  VectorIterator operator-(const SizeT &offset) const {
-    return VectorIterator(data_ - offset * element_stride, 0);
+  VectorIterator operator-(const uoffset_t &offset) const {
+    return VectorIterator(data_ - offset * IndirectHelper<T>::element_stride,
+                          0);
   }
 
-  VectorIterator &operator-=(const SizeT &offset) {
-    data_ -= offset * element_stride;
+  VectorIterator &operator-=(const uoffset_t &offset) {
+    data_ -= offset * IndirectHelper<T>::element_stride;
     return *this;
   }
 
@@ -120,8 +120,8 @@ struct VectorIterator {
   Data data_;
 };
 
-template<typename T, typename IT, typename SizeT = uoffset_t>
-using VectorConstIterator = VectorIterator<T, IT, const uint8_t *, SizeT>;
+template<typename T, typename IT>
+using VectorConstIterator = VectorIterator<T, IT, const uint8_t *>;
 
 template<typename Iterator>
 struct VectorReverseIterator : public std::reverse_iterator<Iterator> {
@@ -145,12 +145,11 @@ struct VectorReverseIterator : public std::reverse_iterator<Iterator> {
 
 // This is used as a helper type for accessing vectors.
 // Vector::data() assumes the vector elements start after the length field.
-template<typename T, typename SizeT = uoffset_t> class Vector {
+template<typename T> class Vector {
  public:
-  typedef VectorIterator<T, typename IndirectHelper<T>::mutable_return_type,
-                         uint8_t *, SizeT>
+  typedef VectorIterator<T, typename IndirectHelper<T>::mutable_return_type>
       iterator;
-  typedef VectorConstIterator<T, typename IndirectHelper<T>::return_type, SizeT>
+  typedef VectorConstIterator<T, typename IndirectHelper<T>::return_type>
       const_iterator;
   typedef VectorReverseIterator<iterator> reverse_iterator;
   typedef VectorReverseIterator<const_iterator> const_reverse_iterator;
@@ -161,40 +160,39 @@ template<typename T, typename SizeT = uoffset_t> class Vector {
   static FLATBUFFERS_CONSTEXPR bool is_span_observable =
       scalar_tag::value && (FLATBUFFERS_LITTLEENDIAN || sizeof(T) == 1);
 
-  SizeT size() const { return EndianScalar(length_); }
+  uoffset_t size() const { return EndianScalar(length_); }
 
   // Deprecated: use size(). Here for backwards compatibility.
   FLATBUFFERS_ATTRIBUTE([[deprecated("use size() instead")]])
-  SizeT Length() const { return size(); }
+  uoffset_t Length() const { return size(); }
 
-  typedef SizeT size_type;
   typedef typename IndirectHelper<T>::return_type return_type;
   typedef typename IndirectHelper<T>::mutable_return_type mutable_return_type;
   typedef return_type value_type;
 
-  return_type Get(SizeT i) const {
+  return_type Get(uoffset_t i) const {
     FLATBUFFERS_ASSERT(i < size());
     return IndirectHelper<T>::Read(Data(), i);
   }
 
-  return_type operator[](SizeT i) const { return Get(i); }
+  return_type operator[](uoffset_t i) const { return Get(i); }
 
   // If this is a Vector of enums, T will be its storage type, not the enum
   // type. This function makes it convenient to retrieve value with enum
   // type E.
-  template<typename E> E GetEnum(SizeT i) const {
+  template<typename E> E GetEnum(uoffset_t i) const {
     return static_cast<E>(Get(i));
   }
 
   // If this a vector of unions, this does the cast for you. There's no check
   // to make sure this is the right type!
-  template<typename U> const U *GetAs(SizeT i) const {
+  template<typename U> const U *GetAs(uoffset_t i) const {
     return reinterpret_cast<const U *>(Get(i));
   }
 
   // If this a vector of unions, this does the cast for you. There's no check
   // to make sure this is actually a string!
-  const String *GetAsString(SizeT i) const {
+  const String *GetAsString(uoffset_t i) const {
     return reinterpret_cast<const String *>(Get(i));
   }
 
@@ -228,7 +226,7 @@ template<typename T, typename SizeT = uoffset_t> class Vector {
 
   // Change elements if you have a non-const pointer to this object.
   // Scalars only. See reflection.h, and the documentation.
-  void Mutate(SizeT i, const T &val) {
+  void Mutate(uoffset_t i, const T &val) {
     FLATBUFFERS_ASSERT(i < size());
     WriteScalar(data() + i, val);
   }
@@ -236,15 +234,15 @@ template<typename T, typename SizeT = uoffset_t> class Vector {
   // Change an element of a vector of tables (or strings).
   // "val" points to the new table/string, as you can obtain from
   // e.g. reflection::AddFlatBuffer().
-  void MutateOffset(SizeT i, const uint8_t *val) {
+  void MutateOffset(uoffset_t i, const uint8_t *val) {
     FLATBUFFERS_ASSERT(i < size());
-    static_assert(sizeof(T) == sizeof(SizeT), "Unrelated types");
+    static_assert(sizeof(T) == sizeof(uoffset_t), "Unrelated types");
     WriteScalar(data() + i,
-                static_cast<SizeT>(val - (Data() + i * sizeof(SizeT))));
+                static_cast<uoffset_t>(val - (Data() + i * sizeof(uoffset_t))));
   }
 
   // Get a mutable pointer to tables/strings inside this vector.
-  mutable_return_type GetMutableObject(SizeT i) const {
+  mutable_return_type GetMutableObject(uoffset_t i) const {
     FLATBUFFERS_ASSERT(i < size());
     return const_cast<mutable_return_type>(IndirectHelper<T>::Read(Data(), i));
   }
@@ -282,7 +280,7 @@ template<typename T, typename SizeT = uoffset_t> class Vector {
   // try to construct these manually.
   Vector();
 
-  SizeT length_;
+  uoffset_t length_;
 
  private:
   // This class is a pointer. Copying will therefore create an invalid object.
@@ -300,8 +298,6 @@ template<typename T, typename SizeT = uoffset_t> class Vector {
     return -table->KeyCompareWithValue(*key);
   }
 };
-
-template<typename T> using Vector64 = Vector<T, uoffset64_t>;
 
 template<class U>
 FLATBUFFERS_CONSTEXPR_CPP11 flatbuffers::span<U> make_span(Vector<U> &vec)

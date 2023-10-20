@@ -229,10 +229,6 @@ class TypedFloatConstantGenerator : public FloatConstantGenerator {
   const std::string neg_inf_number_;
 };
 
-std::string JavaCSharpMakeRule(const bool java, const Parser &parser,
-                               const std::string &path,
-                               const std::string &file_name);
-
 }  // namespace flatbuffers
 
 #endif  // FLATBUFFERS_CODE_GENERATORS_H_
