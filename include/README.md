@@ -19,6 +19,7 @@
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
 -   https://github.com/mapbox/wagyu
 -   https://github.com/nlohmann/json/releases/tag/v3.11.2
+-   https://github.com/serge-sans-paille/frozen
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
 -   https://github.com/taskflow/taskflow
 -   https://github.com/yuki-koyama/tinycolormap
