@@ -1,4 +1,6 @@
-// https://github.com/cubao/nano-fmm/blob/master/3rdparty/packedrtree.h
+// sync with
+//  https://github.com/cubao/headers/blob/main/include/packedrtree.hpp
+//  https://github.com/cubao/nano-fmm/blob/master/3rdparty/packedrtree.hpp
 
 /******************************************************************************
  *
@@ -248,7 +250,7 @@ inline void hilbertSort(std::vector<NodeItem> &items)
 class PackedRTree
 {
     NodeItem _extent;
-    NodeItem *_nodeItems = nullptr;
+    std::vector<NodeItem> _nodeItems;
     uint64_t _numItems;
     uint64_t _numNodes;
     uint16_t _nodeSize;
@@ -263,7 +265,7 @@ class PackedRTree
                              static_cast<uint16_t>(65535));
         _levelBounds = generateLevelBounds(_numItems, _nodeSize);
         _numNodes = _levelBounds.front().second;
-        _nodeItems = new NodeItem[static_cast<size_t>(_numNodes)];
+        _nodeItems.resize(_numNodes);
     }
     void generateNodes()
     {
@@ -292,11 +294,6 @@ class PackedRTree
     }
 
   public:
-    ~PackedRTree()
-    {
-        if (_nodeItems != nullptr)
-            delete[] _nodeItems;
-    }
     PackedRTree(const std::vector<NodeItem> &nodes, const NodeItem &extent,
                 const uint16_t nodeSize = 16)
         : _extent(extent), _numItems(nodes.size())
@@ -406,7 +403,7 @@ class PackedRTree
 
     void streamWrite(const std::function<void(uint8_t *, size_t)> &writeData)
     {
-        writeData(reinterpret_cast<uint8_t *>(_nodeItems),
+        writeData(reinterpret_cast<uint8_t *>(&_nodeItems[0]),
                   static_cast<size_t>(_numNodes * sizeof(NodeItem)));
     }
 
