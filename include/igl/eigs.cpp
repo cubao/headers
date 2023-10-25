@@ -9,7 +9,6 @@
 
 #include "cotmatrix.h"
 #include "sort.h"
-#include "slice.h"
 #include "massmatrix.h"
 #include <iostream>
 
@@ -80,7 +79,6 @@ IGL_INLINE bool igl::eigs(
       sigma = x.dot(A*x)/x.dot(B*x);
       //x *= sigma>0?1.:-1.;
 
-      Scalar err_prev = err;
       err = (A*x-sigma*B*x).array().abs().maxCoeff();
       if(err<conv)
       {
@@ -161,7 +159,7 @@ IGL_INLINE bool igl::eigs(
   // finally sort
   VectorXi I;
   igl::sort(S,1,false,sS,I);
-  igl::slice(U,I,2,sU);
+  sU = U(Eigen::all,I);
   sS /= rescale;
   sU /= sqrt(rescale);
   return true;

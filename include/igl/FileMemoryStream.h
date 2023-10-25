@@ -32,7 +32,7 @@ namespace igl {
     pos_type seekoff(
       off_type off, 
       std::ios_base::seekdir dir,
-      std::ios_base::openmode which) override 
+      std::ios_base::openmode /*which*/) override 
     {
       if (dir == std::ios_base::cur) 
       {
@@ -50,6 +50,7 @@ namespace igl {
     }
   };
   
+  /// Class to convert a FILE * to an std::istream
   struct FileMemoryStream : virtual FileMemoryBuffer, public std::istream 
   {
     FileMemoryStream( char const *first_elem, size_t size)

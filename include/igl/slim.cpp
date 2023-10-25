@@ -17,10 +17,10 @@
 #include "arap.h"
 #include "cat.h"
 #include "doublearea.h"
+#include "volume.h"
 #include "grad.h"
 #include "local_basis.h"
 #include "per_face_normals.h"
-#include "slice_into.h"
 #include "volume.h"
 #include "polar_svd.h"
 #include "flip_avoiding_line_search.h"
@@ -104,12 +104,13 @@ namespace igl
 
 
 
-    IGL_INLINE void solve_weighted_arap(igl::SLIMData& s,
-                                        const Eigen::MatrixXd &V,
-                                        const Eigen::MatrixXi &F,
-                                        Eigen::MatrixXd &uv,
-                                        Eigen::VectorXi &soft_b_p,
-                                        Eigen::MatrixXd &soft_bc_p)
+    IGL_INLINE void solve_weighted_arap(
+      igl::SLIMData& s,
+      const Eigen::MatrixXd & /*V*/,
+      const Eigen::MatrixXi & /*F*/,
+      Eigen::MatrixXd &uv,
+      Eigen::VectorXi & /*soft_b_p*/,
+      Eigen::MatrixXd & /*soft_bc_p*/)
     {
       using namespace Eigen;
 
@@ -294,10 +295,11 @@ namespace igl
              compute_soft_const_energy(s, s.V, s.F, V_new);
     }
 
-    IGL_INLINE double compute_soft_const_energy(igl::SLIMData& s,
-                                                const Eigen::MatrixXd &V,
-                                                const Eigen::MatrixXi &F,
-                                                const Eigen::MatrixXd &V_o)
+    IGL_INLINE double compute_soft_const_energy(
+      igl::SLIMData& s,
+      const Eigen::MatrixXd & /*V*/,
+      const Eigen::MatrixXi & /*F*/,
+      const Eigen::MatrixXd &V_o)
     {
       double e = 0;
       for (int i = 0; i < s.b.rows(); i++)
@@ -408,7 +410,11 @@ IGL_INLINE void igl::slim_update_weights_and_closest_rotations_with_jacobians(co
         {
           double s1_g = 2 * (s1 - pow(s1, -3));
           double s2_g = 2 * (s2 - pow(s2, -3));
-          m_sing_new << sqrt(s1_g / (2 * (s1 - 1))), sqrt(s2_g / (2 * (s2 - 1)));
+          // Limit is 4 if s==1 according to Equation (32) in Rabinovich et al.
+          // [2017]
+          m_sing_new << 
+            (s1==1?4:sqrt(s1_g / (2 * (s1 - 1)))), 
+            (s2==1?4:sqrt(s2_g / (2 * (s2 - 1))));
           break;
         }
         case igl::MappingEnergyType::LOG_ARAP:
@@ -438,10 +444,6 @@ IGL_INLINE void igl::slim_update_weights_and_closest_rotations_with_jacobians(co
         {
           double s1_g = 2 * (s1 - pow(s1, -3));
           double s2_g = 2 * (s2 - pow(s2, -3));
-
-          double geo_avg = sqrt(s1 * s2);
-          double s1_min = geo_avg;
-          double s2_min = geo_avg;
 
           double in_exp = exp_f * ((pow(s1, 2) + pow(s2, 2)) / (2 * s1 * s2));
           double exp_thing = exp(in_exp);
@@ -771,9 +773,18 @@ IGL_INLINE void igl::slim_precompute(
 
   data.proximal_p = 0.0001;
 
-  igl::doublearea(V, F, data.M);
-  data.M /= 2.;
-  data.mesh_area = data.M.sum();
+  if(F.cols() == 3)
+  {
+    igl::doublearea(V, F, data.M);
+    data.mesh_area = data.M.sum()/2;
+  }else 
+  {
+    assert(F.cols() == 4);
+    igl::volume(V, F, data.M);
+    // actually volume.
+    data.mesh_area = data.M.sum();
+  }
+
   data.mesh_improvement_3d = false; // whether to use a jacobian derived from a real mesh or an abstract regular mesh (used for mesh improvement)
   data.exp_factor = 1.0; // param used only for exponential energies (e.g exponential symmetric dirichlet)
 
@@ -793,8 +804,6 @@ IGL_INLINE Eigen::MatrixXd igl::slim_solve(igl::SLIMData &data, int iter_num)
     // Solve Weighted Proxy
     igl::slim::update_weights_and_closest_rotations(data, dest_res);
     igl::slim::solve_weighted_arap(data,data.V, data.F, dest_res, data.b, data.bc);
-
-    double old_energy = data.energy;
 
     std::function<double(Eigen::MatrixXd &)> compute_energy = [&](
         Eigen::MatrixXd &aaa) { return igl::slim::compute_energy(data,aaa); };

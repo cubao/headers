@@ -85,7 +85,9 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 /*
  * Integer types
@@ -198,10 +200,10 @@ typedef union SYS_FPRealUnionT<fpreal64>    SYS_FPRealUnionD;
 
 /// Asserts are disabled
 /// @{
-#define UT_ASSERT_P(ZZ)         ((void)0)
-#define UT_ASSERT(ZZ)           ((void)0)
-#define UT_ASSERT_MSG_P(ZZ, MM) ((void)0)
-#define UT_ASSERT_MSG(ZZ, MM)   ((void)0)
+#define UT_IGL_ASSERT_P(ZZ)         ((void)0)
+#define UT_IGL_ASSERT(ZZ)           ((void)0)
+#define UT_IGL_ASSERT_MSG_P(ZZ, MM) ((void)0)
+#define UT_IGL_ASSERT_MSG(ZZ, MM)   ((void)0)
 /// @}
 }}
 
@@ -242,7 +244,9 @@ typedef union SYS_FPRealUnionT<fpreal64>    SYS_FPRealUnionD;
 #include <limits>
 #include <math.h>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 // NOTE:
 // These have been carefully written so that in the case of equality
@@ -383,7 +387,9 @@ static inline fpreal64 SYSabs(fpreal64 a) { return ::fabs(a); }
     #pragma warning(pop)
 #endif
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 typedef __m128	v4sf;
 typedef __m128i	v4si;
@@ -745,7 +751,9 @@ vm_allbits(const v4si &a)
 
 #include <cmath>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 struct v4si {
 	int32 v[4];
@@ -1174,7 +1182,9 @@ int SYS_FORCE_INLINE _mm_movemask_ps(const v4sf& v) {
 
 
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 class v4uf;
 
@@ -1628,7 +1638,9 @@ typedef v4uu v4ui;
 #include <type_traits>
 #include <string.h>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
  /// This routine describes how to change the size of an array.
  /// It must increase the current_size by at least one!
@@ -1949,7 +1961,7 @@ public:
     ///       asserts are enabled.
     T &		    operator()(exint i)
     {
-        UT_ASSERT_P(i >= 0 && i < mySize);
+        UT_IGL_ASSERT_P(i >= 0 && i < mySize);
         return myData[i];
     }
     /// Const subscript operator
@@ -1957,7 +1969,7 @@ public:
     ///       asserts are enabled.
     const T &	    operator()(exint i) const
     {
-	UT_ASSERT_P(i >= 0 && i < mySize);
+	UT_IGL_ASSERT_P(i >= 0 && i < mySize);
 	return myData[i];
     }
 
@@ -1966,7 +1978,7 @@ public:
     ///       asserts are enabled.
     T &		    operator[](exint i)
     {
-        UT_ASSERT_P(i >= 0 && i < mySize);
+        UT_IGL_ASSERT_P(i >= 0 && i < mySize);
         return myData[i];
     }
     /// Const subscript operator
@@ -1974,7 +1986,7 @@ public:
     ///       asserts are enabled.
     const T &	    operator[](exint i) const
     {
-	UT_ASSERT_P(i >= 0 && i < mySize);
+	UT_IGL_ASSERT_P(i >= 0 && i < mySize);
 	return myData[i];
     }
     
@@ -1983,7 +1995,7 @@ public:
     /// class types.
     T &             forcedRef(exint i)
     {
-        UT_ASSERT_P(i >= 0);
+        UT_IGL_ASSERT_P(i >= 0);
         if (i >= mySize)
             bumpSize(i+1);
         return myData[i];
@@ -1998,12 +2010,12 @@ public:
 
     T &		    last()
     {
-        UT_ASSERT_P(mySize);
+        UT_IGL_ASSERT_P(mySize);
         return myData[mySize-1];
     }
     const T &	    last() const
     {
-        UT_ASSERT_P(mySize);
+        UT_IGL_ASSERT_P(mySize);
         return myData[mySize-1];
     }
 
@@ -2423,7 +2435,9 @@ private:
 #include <stdlib.h>
 #include <string.h>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 
 // Implemented in UT_Array.C
 extern void ut_ArrayImplFree(void *p);
@@ -2527,7 +2541,7 @@ UT_Array<T>::insert(exint index)
     }
     bumpCapacity(mySize + 1);
 
-    UT_ASSERT_P(index >= 0);
+    UT_IGL_ASSERT_P(index >= 0);
     ::memmove((void *)&myData[index+1], (void *)&myData[index],
               ((mySize-index)*sizeof(T)));
 
@@ -2585,7 +2599,7 @@ template <typename T>
 inline void
 UT_Array<T>::appendMultiple(const T &t, exint count)
 {
-    UT_ASSERT_P(count >= 0);
+    UT_IGL_ASSERT_P(count >= 0);
     if (count <= 0)
 	return;
     if (mySize + count >= myCapacity)
@@ -2709,8 +2723,8 @@ template <typename T>
 inline void
 UT_Array<T>::removeRange(exint begin_i, exint end_i)
 {
-    UT_ASSERT(begin_i <= end_i);
-    UT_ASSERT(end_i <= size());
+    UT_IGL_ASSERT(begin_i <= end_i);
+    UT_IGL_ASSERT(end_i <= size());
     if (end_i < size())
     {
 	trivialDestructRange(myData + begin_i, end_i - begin_i);
@@ -2724,10 +2738,10 @@ template <typename T>
 inline void
 UT_Array<T>::extractRange(exint begin_i, exint end_i, UT_Array<T>& dest)
 {
-    UT_ASSERT_P(begin_i >= 0);
-    UT_ASSERT_P(begin_i <= end_i);
-    UT_ASSERT_P(end_i <= size());
-    UT_ASSERT(this != &dest);
+    UT_IGL_ASSERT_P(begin_i >= 0);
+    UT_IGL_ASSERT_P(begin_i <= end_i);
+    UT_IGL_ASSERT_P(end_i <= size());
+    UT_IGL_ASSERT(this != &dest);
 
     exint nelements = end_i - begin_i;
 
@@ -2818,7 +2832,7 @@ UT_Array<T>::removeIf(IsEqual is_equal)
     {
 	if (!is_equal(myData[idx]))
 	{
-	    UT_ASSERT(idx != dst);
+	    UT_IGL_ASSERT(idx != dst);
 	    myData[dst] = myData[idx];
 	    dst++;
 	}
@@ -2893,7 +2907,7 @@ UT_Array<T>::setCapacity(exint capacity)
 	    T *prev = myData;
 	    myData = (T *)malloc(sizeof(T) * capacity);
 	    // myData is safe because we're already a stack buffer
-	    UT_ASSERT_P(isHeapBuffer());
+	    UT_IGL_ASSERT_P(isHeapBuffer());
 	    if (mySize > 0)
 		memcpy((void *)myData, (void *)prev, sizeof(T) * mySize);
 	    myCapacity = capacity;
@@ -2901,7 +2915,7 @@ UT_Array<T>::setCapacity(exint capacity)
 	else 
 	{
 	    // Keep myCapacity unchanged in this case
-	    UT_ASSERT_P(capacity >= mySize && capacity <= myCapacity);
+	    UT_IGL_ASSERT_P(capacity >= mySize && capacity <= myCapacity);
 	}
 	return;
     }
@@ -2941,7 +2955,7 @@ UT_Array<T>::setCapacity(exint capacity)
     }
 
     myCapacity = capacity;
-    UT_ASSERT(myData);
+    UT_IGL_ASSERT(myData);
 }
 
 template <typename T>
@@ -3086,7 +3100,9 @@ UT_Array<T>::operator!=(const UT_Array<T> &a) const
 
 #include <utility>
 #include <stddef.h>
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 /// An array class with the small buffer optimization, making it ideal for
 /// cases when you know it will only contain a few elements at the expense of
@@ -3103,14 +3119,14 @@ public:
 // easily suppress this because it has to be done in the caller at
 // instantiation time. Instead, punt to a runtime check instead.
 #if defined(__clang__) || defined(_MSC_VER)
-    #define UT_SMALL_ARRAY_SIZE_ASSERT()    \
+    #define UT_SMALL_ARRAY_SIZE_IGL_ASSERT()    \
         using ThisT = UT_SmallArray<T,MAX_BYTES>; \
 	static_assert(offsetof(ThisT, myBuffer) == sizeof(UT_Array<T>), \
             "In order for UT_Array's checks for whether it needs to free the buffer to work, " \
             "the buffer must be exactly following the base class memory.")
 #else
-    #define UT_SMALL_ARRAY_SIZE_ASSERT()    \
-	UT_ASSERT_P(!UT_Array<T>::isHeapBuffer());
+    #define UT_SMALL_ARRAY_SIZE_IGL_ASSERT()    \
+	UT_IGL_ASSERT_P(!UT_Array<T>::isHeapBuffer());
 #endif
 
     /// Default construction
@@ -3118,7 +3134,7 @@ public:
 	: UT_Array<T>(/*capacity*/0)
     {
 	UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-	UT_SMALL_ARRAY_SIZE_ASSERT();
+	UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
     }
     
     /// Copy constructor
@@ -3127,14 +3143,14 @@ public:
 	: UT_Array<T>(/*capacity*/0)
     {
 	UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-	UT_SMALL_ARRAY_SIZE_ASSERT();
+	UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
 	UT_Array<T>::operator=(copy);
     }
     explicit UT_SmallArray(const UT_SmallArray<T,MAX_BYTES> &copy)
 	: UT_Array<T>(/*capacity*/0)
     {
 	UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-	UT_SMALL_ARRAY_SIZE_ASSERT();
+	UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
 	UT_Array<T>::operator=(copy);
     }
     /// @}
@@ -3144,13 +3160,13 @@ public:
     UT_SmallArray(UT_Array<T> &&movable) noexcept
     {
 	UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-	UT_SMALL_ARRAY_SIZE_ASSERT();
+	UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
 	UT_Array<T>::operator=(std::move(movable));
     }
     UT_SmallArray(UT_SmallArray<T,MAX_BYTES> &&movable) noexcept
     {
 	UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-	UT_SMALL_ARRAY_SIZE_ASSERT();
+	UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
 	UT_Array<T>::operator=(std::move(movable));
     }
     /// @}
@@ -3159,11 +3175,11 @@ public:
     explicit UT_SmallArray(std::initializer_list<T> init)
     {
         UT_Array<T>::unsafeShareData((T*)myBuffer, 0, MAX_ELEMS);
-        UT_SMALL_ARRAY_SIZE_ASSERT();
+        UT_SMALL_ARRAY_SIZE_IGL_ASSERT();
         UT_Array<T>::operator=(init);
     }
 
-#undef UT_SMALL_ARRAY_SIZE_ASSERT
+#undef UT_SMALL_ARRAY_SIZE_IGL_ASSERT
 
     /// Assignment operator
     /// @{
@@ -3242,7 +3258,9 @@ private:
 
 
 
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 
 template<typename T,exint SIZE,bool INSTANTIATED=false>
 class UT_FixedVector
@@ -3285,12 +3303,12 @@ public:
 
     SYS_FORCE_INLINE const T &operator[](exint i) const noexcept
     {
-        UT_ASSERT_P(i >= 0 && i < SIZE);
+        UT_IGL_ASSERT_P(i >= 0 && i < SIZE);
         return vec[i];
     }
     SYS_FORCE_INLINE T &operator[](exint i) noexcept
     {
-        UT_ASSERT_P(i >= 0 && i < SIZE);
+        UT_IGL_ASSERT_P(i >= 0 && i < SIZE);
         return vec[i];
     }
 
@@ -3646,7 +3664,9 @@ struct UT_FixedVectorTraits<UT_FixedVector<T,SIZE,INSTANTIATED> >
 
 
 #include <thread> // This is just included for std::thread::hardware_concurrency()
-namespace igl { namespace FastWindingNumber {
+namespace igl {
+  /// @private
+  namespace FastWindingNumber {
 namespace UT_Thread { inline int getNumProcessors() {
     return std::thread::hardware_concurrency();
 }}
@@ -3796,9 +3816,9 @@ namespace UT_Thread { inline int getNumProcessors() {
 //{
 //    const size_t num_processors( UT_Thread::getNumProcessors() );
 //
-//    UT_ASSERT( num_processors >= 1 );
-//    UT_ASSERT( min_grain_size >= 1 );
-//    UT_ASSERT( subscribe_ratio >= 0 );
+//    UT_IGL_ASSERT( num_processors >= 1 );
+//    UT_IGL_ASSERT( min_grain_size >= 1 );
+//    UT_IGL_ASSERT( subscribe_ratio >= 0 );
 //
 //    const size_t est_range_size( UTestimatedNumItems(range) );
 //
@@ -3879,7 +3899,9 @@ namespace UT_Thread { inline int getNumProcessors() {
 
 #include <limits>
 #include <memory>
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 
 template<typename T> class UT_Array;
 class v4uf;
@@ -3926,11 +3948,11 @@ struct Box {
     }
 
     SYS_FORCE_INLINE const T* operator[](const size_t axis) const noexcept {
-        UT_ASSERT_P(axis < NAXES);
+        UT_IGL_ASSERT_P(axis < NAXES);
         return vals[axis];
     }
     SYS_FORCE_INLINE T* operator[](const size_t axis) noexcept {
-        UT_ASSERT_P(axis < NAXES);
+        UT_IGL_ASSERT_P(axis < NAXES);
         return vals[axis];
     }
 
@@ -4380,7 +4402,7 @@ private:
             T diameter2 = box.diameter2();
             return diameter2*SYSsqrt(diameter2);
         }
-        UT_ASSERT_MSG(0, "BVH_Heuristic::MEDIAN_MAX_AXIS should be handled separately by caller!");
+        UT_IGL_ASSERT_MSG(0, "BVH_Heuristic::MEDIAN_MAX_AXIS should be handled separately by caller!");
         return T(1);
     }
 
@@ -4440,12 +4462,14 @@ using UT_BVH = UT::BVH<N>;
 
 
 
-#include <igl/parallel_for.h>
+#include "parallel_for.h"
 
 #include <iostream>
 #include <algorithm>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 namespace HDK_Sample {
 
 namespace UT {
@@ -4511,8 +4535,8 @@ struct ut_BoxCentre<UT_FixedVector<T,NAXES,INSTANTIATED>> {
 template<typename BOX_TYPE,typename SRC_INT_TYPE,typename INT_TYPE>
 inline INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE& nboxes) noexcept 
 {
-    constexpr INT_TYPE PARALLEL_THRESHOLD = 65536;
-    INT_TYPE ntasks = 1;
+    //constexpr INT_TYPE PARALLEL_THRESHOLD = 65536;
+    //INT_TYPE ntasks = 1;
     //if (nboxes >= PARALLEL_THRESHOLD) 
     //{
     //    INT_TYPE nprocessors = UT_Thread::getNumProcessors();
@@ -4750,7 +4774,7 @@ inline void BVH<N>::traverseParallelHelper(
             }
             const INT_TYPE node_int = node.child[s];
             if (Node::isInternal(node_int)) {
-                UT_ASSERT_MSG_P(node_int != Node::EMPTY, "Empty entries should have been excluded above.");
+                UT_IGL_ASSERT_MSG_P(node_int != Node::EMPTY, "Empty entries should have been excluded above.");
                 traverseParallelHelper(Node::getInternalNum(node_int), nodei, parallel_threshold, next_nodes[s], functors, &local_data[s]);
             }
             else {
@@ -4827,7 +4851,7 @@ inline void BVH<N>::traverseVectorHelper(
 template<uint N>
 template<typename SRC_INT_TYPE>
 inline void BVH<N>::createTrivialIndices(SRC_INT_TYPE* indices, const INT_TYPE n) noexcept {
-    igl::parallel_for(n, [indices,n](INT_TYPE i) { indices[i] = i; }, 65536);
+    igl::parallel_for(n, [indices](INT_TYPE i) { indices[i] = i; }, 65536);
 }
 
 template<uint N>
@@ -4956,7 +4980,7 @@ inline void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXE
                     ++counted_parallel;
                 }
             }
-            UT_ASSERT_P(counted_parallel == taski);
+            UT_IGL_ASSERT_P(counted_parallel == taski);
 
             UT_Array<Node>& local_nodes = parallel_nodes[taski];
             // Preallocate an overestimate of the number of nodes needed.
@@ -5150,7 +5174,7 @@ inline void BVH<N>::initNodeReorder(UT_Array<Node>& nodes, Node &node, const Box
       //                  ++counted_parallel;
       //              }
       //          }
-      //          UT_ASSERT_P(counted_parallel == taski);
+      //          UT_IGL_ASSERT_P(counted_parallel == taski);
 
       //          UT_Array<Node>& local_nodes = parallel_nodes[taski];
       //          // Preallocate an overestimate of the number of nodes needed.
@@ -5273,7 +5297,7 @@ inline void BVH<N>::multiSplit(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* 
                         box = sub_boxes_unsorted[j];
                     }
                 }
-                UT_ASSERT_P(min_pointer);
+                UT_IGL_ASSERT_P(min_pointer);
                 sub_indices[i] = min_pointer;
                 sub_boxes[i] = box;
             }
@@ -5297,7 +5321,7 @@ inline void BVH<N>::multiSplit(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* 
                     }
                 }
             }
-            UT_ASSERT_MSG_P(split_choice != INT_TYPE(-1), "There should always be at least one that can be split!");
+            UT_IGL_ASSERT_MSG_P(split_choice != INT_TYPE(-1), "There should always be at least one that can be split!");
 
             SRC_INT_TYPE* selected_start = sub_indices[split_choice];
             SRC_INT_TYPE* selected_end = sub_indices[split_choice+1];
@@ -5330,10 +5354,10 @@ inline void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes
         split_indices = indices+1;
         return;
     }
-    UT_ASSERT_MSG_P(nboxes > 2, "Cases with less than 3 boxes should have already been handled!");
+    UT_IGL_ASSERT_MSG_P(nboxes > 2, "Cases with less than 3 boxes should have already been handled!");
 
     if (H == BVH_Heuristic::MEDIAN_MAX_AXIS) {
-        UT_ASSERT_MSG(0, "FIXME: Implement this!!!");
+        UT_IGL_ASSERT_MSG(0, "FIXME: Implement this!!!");
     }
 
     constexpr INT_TYPE SMALL_LIMIT = 6;
@@ -5659,9 +5683,9 @@ inline void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes
 
     // Check which split is optimal, making sure that at least 1/MIN_FRACTION of all boxes are on each side.
     const INT_TYPE min_count = nboxes/MIN_FRACTION;
-    UT_ASSERT_MSG_P(min_count > 0, "MID_LIMIT above should have been large enough that nboxes would be > MIN_FRACTION");
+    UT_IGL_ASSERT_MSG_P(min_count > 0, "MID_LIMIT above should have been large enough that nboxes would be > MIN_FRACTION");
     const INT_TYPE max_count = ((MIN_FRACTION-1)*uint64(nboxes))/MIN_FRACTION;
-    UT_ASSERT_MSG_P(max_count < nboxes, "I'm not sure how this could happen mathematically, but it needs to be checked.");
+    UT_IGL_ASSERT_MSG_P(max_count < nboxes, "I'm not sure how this could happen mathematically, but it needs to be checked.");
     T smallest_heuristic = std::numeric_limits<T>::infinity();
     INT_TYPE split_index = -1;
     for (INT_TYPE spliti = 0; spliti < NSPLITS; ++spliti) {
@@ -5796,7 +5820,7 @@ inline void BVH<N>::adjustParallelChildNodes(INT_TYPE nparallel, UT_Array<Node>&
                     ++counted_parallel;
                 }
             }
-            UT_ASSERT_P(counted_parallel == taski);
+            UT_IGL_ASSERT_P(counted_parallel == taski);
 
             const UT_Array<Node>& local_nodes = parallel_nodes[counted_parallel];
             INT_TYPE n = local_nodes.size();
@@ -6008,7 +6032,9 @@ void BVH<N>::debugDump() const {
 
 #include <memory>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 namespace HDK_Sample {
 
 template<typename T>
@@ -6373,7 +6399,9 @@ private:
 
 #include <stdlib.h>
 
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 
 // This needs to be here or else the warning suppression doesn't work because
 // the templated calling code won't otherwise be compiled until after we've
@@ -6423,7 +6451,7 @@ inline void ut_ArrayImplFree(void *p)
 
 
 
-#include <igl/parallel_for.h>
+#include "parallel_for.h"
 #include <type_traits>
 #include <utility>
 
@@ -6440,7 +6468,9 @@ inline void ut_ArrayImplFree(void *p)
 
 #define TAYLOR_SERIES_ORDER 2
 
-namespace igl { namespace FastWindingNumber {
+namespace igl { 
+  /// @private
+  namespace FastWindingNumber {
 
 namespace HDK_Sample {
 
@@ -6631,11 +6661,11 @@ inline void UT_SolidAngle<T,S>::init(
             , myPositions(positions)
             , myOrder(order)
         {}
-        constexpr SYS_FORCE_INLINE bool pre(const int nodei, LocalData *data_for_parent) const
+        constexpr SYS_FORCE_INLINE bool pre(const int /*nodei*/, LocalData * /*data_for_parent*/) const
         {
             return true;
         }
-        void item(const int itemi, const int parent_nodei, LocalData &data_for_parent) const
+        void item(const int itemi, const int /*parent_nodei*/, LocalData &data_for_parent) const
         {
             const UT_Vector3T<S> *const positions = myPositions;
             const int *const cur_triangle_points = myTrianglePoints + 3*itemi;
@@ -6746,9 +6776,9 @@ inline void UT_SolidAngle<T,S>::init(
                 const UT_Vector3T<T> oab = b - a;
                 const UT_Vector3T<T> oac = c - a;
                 const UT_Vector3T<T> ocb = b - c;
-                UT_ASSERT_MSG_P(oac[i] > 0, "This should have been checked by the caller.");
+                UT_IGL_ASSERT_MSG_P(oac[i] > 0, "This should have been checked by the caller.");
                 const T t = oab[i]/oac[i];
-                UT_ASSERT_MSG_P(t >= 0 && t <= 1, "Either sorting must have gone wrong, or there are input NaNs.");
+                UT_IGL_ASSERT_MSG_P(t >= 0 && t <= 1, "Either sorting must have gone wrong, or there are input NaNs.");
 
                 const int j = (i==2) ? 0 : (i+1);
                 const int k = (j==2) ? 0 : (j+1);
@@ -6859,7 +6889,7 @@ inline void UT_SolidAngle<T,S>::init(
 #endif
         }
 
-        void post(const int nodei, const int parent_nodei, LocalData *data_for_parent, const int nchildren, const LocalData *child_data_array) const
+        void post(const int nodei, const int /*parent_nodei*/, LocalData *data_for_parent, const int nchildren, const LocalData *child_data_array) const
         {
             // NOTE: Although in the general case, data_for_parent may be null for the root call,
             //       this functor assumes that it's non-null, so the call below must pass a non-null pointer.
@@ -7139,9 +7169,9 @@ inline T UT_SolidAngle<T, S>::computeSolidAngle(const UT_Vector3T<T> &query_poin
             : myBoxData(box_data)
             , myQueryPoint(query_point)
             , myAccuracyScale2(accuracy_scale2)
-            , myOrder(order)
             , myPositions(positions)
             , myTrianglePoints(triangle_points)
+            , myOrder(order)
         {}
         uint pre(const int nodei, T *data_for_parent) const
         {
@@ -7227,7 +7257,7 @@ inline T UT_SolidAngle<T, S>::computeSolidAngle(const UT_Vector3T<T> &query_poin
 
             return descend_bitmask;
         }
-        void item(const int itemi, const int parent_nodei, T &data_for_parent) const
+        void item(const int itemi, const int /*parent_nodei*/, T &data_for_parent) const
         {
             const UT_Vector3T<S> *const positions = myPositions;
             const int *const cur_triangle_points = myTrianglePoints + 3*itemi;
@@ -7237,7 +7267,7 @@ inline T UT_SolidAngle<T, S>::computeSolidAngle(const UT_Vector3T<T> &query_poin
 
             data_for_parent = UTsignedSolidAngleTri(a, b, c, myQueryPoint);
         }
-        SYS_FORCE_INLINE void post(const int nodei, const int parent_nodei, T *data_for_parent, const int nchildren, const T *child_data_array, const uint descend_bits) const
+        SYS_FORCE_INLINE void post(const int /*nodei*/, const int /*parent_nodei*/, T *data_for_parent, const int nchildren, const T *child_data_array, const uint descend_bits) const
         {
             T sum = (descend_bits&1) ? child_data_array[0] : 0;
             for (int i = 1; i < nchildren; ++i)
@@ -7416,11 +7446,11 @@ inline void UT_SubtendedAngle<T,S>::init(
             , myPositions(positions)
             , myOrder(order)
         {}
-        constexpr SYS_FORCE_INLINE bool pre(const int nodei, LocalData *data_for_parent) const
+        constexpr SYS_FORCE_INLINE bool pre(const int /*nodei*/, LocalData * /*data_for_parent*/) const
         {
             return true;
         }
-        void item(const int itemi, const int parent_nodei, LocalData &data_for_parent) const
+        void item(const int itemi, const int /*parent_nodei*/, LocalData &data_for_parent) const
         {
             const UT_Vector2T<S> *const positions = myPositions;
             const int *const cur_segment_points = mySegmentPoints + 2*itemi;
@@ -7486,7 +7516,7 @@ inline void UT_SubtendedAngle<T,S>::init(
 #endif
         }
 
-        void post(const int nodei, const int parent_nodei, LocalData *data_for_parent, const int nchildren, const LocalData *child_data_array) const
+        void post(const int nodei, const int /*parent_nodei*/, LocalData *data_for_parent, const int nchildren, const LocalData *child_data_array) const
         {
             // NOTE: Although in the general case, data_for_parent may be null for the root call,
             //       this functor assumes that it's non-null, so the call below must pass a non-null pointer.
@@ -7768,7 +7798,7 @@ inline T UT_SubtendedAngle<T, S>::computeAngle(const UT_Vector2T<T> &query_point
 
             return descend_bitmask;
         }
-        void item(const int itemi, const int parent_nodei, T &data_for_parent) const
+        void item(const int itemi, const int /*parent_nodei*/, T &data_for_parent) const
         {
             const UT_Vector2T<S> *const positions = myPositions;
             const int *const cur_segment_points = mySegmentPoints + 2*itemi;
@@ -7777,7 +7807,7 @@ inline T UT_SubtendedAngle<T, S>::computeAngle(const UT_Vector2T<T> &query_point
 
             data_for_parent = UTsignedAngleSegment(a, b, myQueryPoint);
         }
-        SYS_FORCE_INLINE void post(const int nodei, const int parent_nodei, T *data_for_parent, const int nchildren, const T *child_data_array, const uint descend_bits) const
+        SYS_FORCE_INLINE void post(const int /*nodei*/, const int /*parent_nodei*/, T *data_for_parent, const int nchildren, const T *child_data_array, const uint descend_bits) const
         {
             T sum = (descend_bits&1) ? child_data_array[0] : 0;
             for (int i = 1; i < nchildren; ++i)

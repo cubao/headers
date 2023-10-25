@@ -8,7 +8,6 @@
 #include "iterative_closest_point.h"
 #include "AABB.h"
 #include "per_face_normals.h"
-#include "slice.h"
 #include "random_points_on_mesh.h"
 #include "rigid_alignment.h"
 #include <cassert>
@@ -38,9 +37,6 @@ IGL_INLINE void igl::iterative_closest_point(
 
   typedef typename DerivedVX::Scalar Scalar;
   typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> MatrixXS;
-  typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
-  typedef Eigen::Matrix<Scalar,3,3> Matrix3S;
-  typedef Eigen::Matrix<Scalar,1,3> RowVector3S;
 
   // Precompute BVH on Y
   AABB<DerivedVY,3> Ytree;
@@ -76,6 +72,7 @@ IGL_INLINE void igl::iterative_closest_point(
   typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> MatrixXS;
   typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
   typedef Eigen::Matrix<Scalar,3,3> Matrix3S;
+  typedef Eigen::Matrix<Scalar,Eigen::Dynamic,3> MatrixX3S;
   typedef Eigen::Matrix<Scalar,1,3> RowVector3S;
   R.setIdentity(3,3);
   t.setConstant(1,3,0);
@@ -86,7 +83,7 @@ IGL_INLINE void igl::iterative_closest_point(
     MatrixXS X;
     {
       Eigen::VectorXi XI;
-      Eigen::MatrixXd B;
+      MatrixX3S B;
       MatrixXS VXRT = (VX*R).rowwise()+t;
 
       random_points_on_mesh(num_samples,VXRT,FX,B,XI,X);
@@ -99,8 +96,7 @@ IGL_INLINE void igl::iterative_closest_point(
       Ytree.squared_distance(VY,FY,X,sqrD,I,P);
     }
     // Use better normals?
-    MatrixXS N;
-    slice(NY,I,1,N);
+    MatrixXS N = NY(I,Eigen::all);
     //MatrixXS N = (X - P).rowwise().normalized();
     // fit rotation,translation
     Matrix3S Rup;

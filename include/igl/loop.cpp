@@ -8,9 +8,9 @@
 
 #include "loop.h"
 
-#include <igl/adjacency_list.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/unique.h>
+#include "adjacency_list.h"
+#include "triangle_triangle_adjacency.h"
+#include "unique.h"
 
 #include <vector>
 
@@ -24,7 +24,6 @@ IGL_INLINE void igl::loop(
   Eigen::SparseMatrix<SType>& S,
   Eigen::PlainObjectBase<DerivedNF> & NF)
 {
-  typedef Eigen::SparseMatrix<SType> SparseMat;
   typedef Eigen::Triplet<SType> Triplet_t;
 
   //Ref. https://graphics.stanford.edu/~mdfisher/subdivision.html
