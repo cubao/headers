@@ -10,6 +10,7 @@
 -   https://github.com/dpilger26/NumCpp
 -   https://github.com/felixguendling/cista
 -   https://github.com/gabime/spdlog/tree/v1.x/include/spdlog
+-   https://github.com/greg7mdp/parallel-hashmap.git
 -   https://github.com/lava/matplotlib-cpp
 -   https://github.com/libigl/libigl (no copyleft code)
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
