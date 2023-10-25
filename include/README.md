@@ -36,3 +36,4 @@
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
 -   https://raw.githubusercontent.com/mourner/kdbush.hpp/master/include/kdbush.hpp
 -   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
+-   https://raw.githubusercontent.com/vimpunk/mio/master/single_include/mio/mio.hpp
