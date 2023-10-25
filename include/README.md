@@ -28,6 +28,7 @@
 -   https://nemequ.github.io/hedley/
 -   https://raw.githubusercontent.com/Dobiasd/FunctionalPlus/master/include_all_in_one/include/fplus/fplus.hpp
 -   https://raw.githubusercontent.com/adamyaxley/Obfuscate/master/obfuscate.h
+-   https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp
 -   https://raw.githubusercontent.com/jlblancoc/nanoflann/master/include/nanoflann.hpp
 -   https://raw.githubusercontent.com/mapbox/eternal/master/include/mapbox/eternal.hpp
 -   https://raw.githubusercontent.com/mapbox/polylabel/master/include/mapbox/polylabel.hpp
