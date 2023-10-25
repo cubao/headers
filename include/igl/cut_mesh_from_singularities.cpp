@@ -8,8 +8,8 @@
 
 #include "cut_mesh_from_singularities.h"
 
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/edge_topology.h>
+#include "triangle_triangle_adjacency.h"
+#include "edge_topology.h"
 
 #include <vector>
 #include <deque>
@@ -156,12 +156,10 @@ namespace igl {
       F_visited.setConstant(F.rows(),0);
       Handle_Seams.setConstant(F.rows(),3,1);
 
-      int index=0;
       for (unsigned f = 0; f<F.rows(); f++)
       {
         if (!F_visited(f))
         {
-          index++;
           FloodFill(f, Handle_Seams);
         }
       }

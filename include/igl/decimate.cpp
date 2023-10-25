@@ -11,8 +11,7 @@
 #include "decimate_trivial_callbacks.h"
 #include "is_edge_manifold.h"
 #include "remove_unreferenced.h"
-#include "slice_mask.h"
-#include "slice.h"
+#include "find.h"
 #include "connect_boundary_to_infinity.h"
 #include "parallel_for.h"
 #include "max_faces_stopping_condition.h"
@@ -69,11 +68,11 @@ IGL_INLINE bool igl::decimate(
     J,
     I);
   const Eigen::Array<bool,Eigen::Dynamic,1> keep = (J.array()<orig_m);
-  igl::slice_mask(Eigen::MatrixXi(G),keep,1,G);
-  igl::slice_mask(Eigen::VectorXi(J),keep,1,J);
+  G = G(igl::find(keep),Eigen::all).eval();
+  J = J(igl::find(keep)).eval();
   Eigen::VectorXi _1,I2;
   igl::remove_unreferenced(Eigen::MatrixXd(U),Eigen::MatrixXi(G),U,G,_1,I2);
-  igl::slice(Eigen::VectorXi(I),I2,1,I);
+  I = I(I2).eval();
   return ret;
 }
 
@@ -137,10 +136,10 @@ IGL_INLINE bool igl::decimate(
   const decimate_stopping_condition_callback & stopping_condition,
   const decimate_pre_collapse_callback       & pre_collapse,
   const decimate_post_collapse_callback      & post_collapse,
-  const Eigen::MatrixXi & OE,
-  const Eigen::VectorXi & OEMAP,
-  const Eigen::MatrixXi & OEF,
-  const Eigen::MatrixXi & OEI,
+  const Eigen::MatrixXi & /*OE*/,
+  const Eigen::VectorXi & /*OEMAP*/,
+  const Eigen::MatrixXi & /*OEF*/,
+  const Eigen::MatrixXi & /*OEI*/,
   Eigen::MatrixXd & U,
   Eigen::MatrixXi & G,
   Eigen::VectorXi & J,
@@ -153,6 +152,7 @@ IGL_INLINE bool igl::decimate(
   // Working copies
   Eigen::MatrixXd V = OV;
   Eigen::MatrixXi F = OF;
+  // Why recompute this rather than copy input?
   VectorXi EMAP;
   MatrixXi E,EF,EI;
   edge_flaps(F,E,EMAP,EF,EI);

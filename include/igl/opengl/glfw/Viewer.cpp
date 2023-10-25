@@ -27,31 +27,31 @@
 #include <limits>
 #include <cassert>
 
-#include <igl/project.h>
-#include <igl/get_seconds.h>
-#include <igl/readOBJ.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/adjacency_list.h>
-#include <igl/writeOBJ.h>
-#include <igl/writeOFF.h>
-#include <igl/massmatrix.h>
-#include <igl/file_dialog_open.h>
-#include <igl/file_dialog_save.h>
-#include <igl/quat_mult.h>
-#include <igl/axis_angle_to_quat.h>
-#include <igl/trackball.h>
-#include <igl/two_axis_valuator_fixed_up.h>
-#include <igl/snap_to_canonical_view_quat.h>
-#include <igl/unproject.h>
-#include <igl/serialize.h>
+#include "../../project.h"
+#include "../../get_seconds.h"
+#include "../../readOBJ.h"
+#include "../../read_triangle_mesh.h"
+#include "../../writeOBJ.h"
+#include "../../writeOFF.h"
+#include "../../massmatrix.h"
+#include "../../file_dialog_open.h"
+#include "../../file_dialog_save.h"
+#include "../../quat_mult.h"
+#include "../../axis_angle_to_quat.h"
+#include "../../trackball.h"
+#include "../../two_axis_valuator_fixed_up.h"
+#include "../../snap_to_canonical_view_quat.h"
+#include "../../unproject.h"
+#include "../../serialize.h"
 
 // Internal global variables used for glfw event handling
 static igl::opengl::glfw::Viewer * __viewer;
-static double highdpi = 1;
+static double highdpiw = 1; // High DPI width
+static double highdpih = 1; // High DPI height
 static double scroll_x = 0;
 static double scroll_y = 0;
 
-static void glfw_mouse_press(GLFWwindow* window, int button, int action, int modifier)
+static void glfw_mouse_press(GLFWwindow* /*window*/, int button, int action, int modifier)
 {
 
   igl::opengl::glfw::Viewer::MouseButton mb;
@@ -69,17 +69,17 @@ static void glfw_mouse_press(GLFWwindow* window, int button, int action, int mod
     __viewer->mouse_up(mb,modifier);
 }
 
-static void glfw_error_callback(int error, const char* description)
+static void glfw_error_callback(int /*error*/, const char* description)
 {
   fputs(description, stderr);
 }
 
-static void glfw_char_mods_callback(GLFWwindow* window, unsigned int codepoint, int modifier)
+static void glfw_char_mods_callback(GLFWwindow* /*window*/ , unsigned int codepoint, int modifier)
 {
   __viewer->key_pressed(codepoint, modifier);
 }
 
-static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int modifier)
+static void glfw_key_callback(GLFWwindow* window , int key, int /*scancode*/, int action, int modifier)
 {
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GL_TRUE);
@@ -90,21 +90,21 @@ static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int act
     __viewer->key_up(key, modifier);
 }
 
-static void glfw_window_size(GLFWwindow* window, int width, int height)
+static void glfw_window_size(GLFWwindow* /*window*/ , int width, int height)
 {
-  int w = width*highdpi;
-  int h = height*highdpi;
+  int w = width*highdpiw;
+  int h = height*highdpih;
 
   __viewer->post_resize(w, h);
 
 }
 
-static void glfw_mouse_move(GLFWwindow* window, double x, double y)
+static void glfw_mouse_move(GLFWwindow* /*window*/ , double x, double y)
 {
-  __viewer->mouse_move(x*highdpi, y*highdpi);
+  __viewer->mouse_move(x*highdpiw, y*highdpih);
 }
 
-static void glfw_mouse_scroll(GLFWwindow* window, double x, double y)
+static void glfw_mouse_scroll(GLFWwindow* /*window*/ , double x, double y)
 {
   using namespace std;
   scroll_x += x;
@@ -113,7 +113,7 @@ static void glfw_mouse_scroll(GLFWwindow* window, double x, double y)
   __viewer->mouse_scroll(y);
 }
 
-static void glfw_drop_callback(GLFWwindow *window,int count,const char **filenames)
+static void glfw_drop_callback(GLFWwindow * /*window*/,int /*count*/,const char ** /*filenames*/)
 {
 }
 
@@ -124,18 +124,21 @@ namespace opengl
 namespace glfw
 {
 
-  IGL_INLINE int Viewer::launch(bool resizable /*= true*/, bool fullscreen /*= false*/,
+  IGL_INLINE int Viewer::launch(bool fullscreen /*= false*/,
     const std::string &name, int windowWidth /*= 0*/, int windowHeight /*= 0*/)
   {
     // TODO return values are being ignored...
-    launch_init(resizable,fullscreen,name,windowWidth,windowHeight);
+    launch_init(fullscreen,name,windowWidth,windowHeight);
     launch_rendering(true);
     launch_shut();
     return EXIT_SUCCESS;
   }
 
-  IGL_INLINE int  Viewer::launch_init(bool resizable, bool fullscreen,
-    const std::string &name, int windowWidth, int windowHeight)
+  IGL_INLINE int  Viewer::launch_init(
+    bool fullscreen,
+    const std::string &name, 
+    int windowWidth, 
+    int windowHeight)
   {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -143,8 +146,8 @@ namespace glfw
       return EXIT_FAILURE;
     }
     glfwWindowHint(GLFW_SAMPLES, 8);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     #ifdef __APPLE__
       glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
       glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -178,12 +181,12 @@ namespace glfw
     }
     glfwMakeContextCurrent(window);
     // Load OpenGL and its extensions
-    if (!gladLoadGL((GLADloadfunc) glfwGetProcAddress))
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
     {
       printf("Failed to load OpenGL and its extensions\n");
       return(-1);
     }
-    #if defined(DEBUG) || defined(_DEBUG)
+    #if !defined(WIN32) && (defined(DEBUG) || defined(_DEBUG))
       printf("OpenGL Version %d.%d loaded\n", GLVersion.major, GLVersion.minor);
       int major, minor, rev;
       major = glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MAJOR);
@@ -209,7 +212,8 @@ namespace glfw
     glfwGetFramebufferSize(window, &width, &height);
     int width_window, height_window;
     glfwGetWindowSize(window, &width_window, &height_window);
-    highdpi = windowWidth/width_window;
+    highdpiw = windowWidth/width_window;
+    highdpih = windowHeight/height_window;
     glfw_window_size(window,width_window,height_window);
     // Initialize IGL viewer
     init();
@@ -240,18 +244,17 @@ namespace glfw
       if(core().is_animating || frame_counter++ < num_extra_frames)
       {
         glfwPollEvents();
-        // In microseconds
-        double duration = 1000000.*(get_seconds()-tic);
-        const double min_duration = 1000000./core().animation_max_fps;
-        if(duration<min_duration)
-        {
-          std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
-        }
-      }
-      else
+      }else
       {
         glfwWaitEvents();
         frame_counter = 0;
+      }
+      // In microseconds
+      double duration = 1000000.*(get_seconds()-tic);
+      const double min_duration = 1000000./core().animation_max_fps;
+      if(duration<min_duration)
+      {
+        std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
       }
       if (!loop)
         return !glfwWindowShouldClose(window);
@@ -274,7 +277,10 @@ namespace glfw
     {
       data.meshgl.free();
     }
-    core().shut(); // Doesn't do anything
+    for(auto &core : this->core_list)
+    {
+      core.shut(); 
+    }
     shutdown_plugins();
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -283,7 +289,10 @@ namespace glfw
 
   IGL_INLINE void Viewer::init()
   {
-    core().init(); // Doesn't do anything
+    for(auto &core : this->core_list)
+    {
+      core.init();
+    }
 
     if (callback_init)
       if (callback_init(*this))
@@ -360,6 +369,7 @@ namespace glfw
   I,i     Toggle invert normals
   L,l     Toggle wireframe
   O,o     Toggle orthographic/perspective projection
+  S,s     Toggle shadows
   T,t     Toggle filled faces
   Z       Snap to canonical view
   [,]     Toggle between rotation control types (trackball, two-axis
@@ -552,6 +562,39 @@ namespace glfw
       case 'o':
       {
         core().orthographic = !core().orthographic;
+        return true;
+      }
+      case 'S':
+      case 's':
+      {
+        if(core().is_directional_light)
+        {
+          core().is_shadow_mapping = !core().is_shadow_mapping;
+        }else
+        {
+          if(core().is_shadow_mapping)
+          {
+            core().is_shadow_mapping = false;
+          }else
+          {
+            // The light_position when !is_directional_light is interpretted as
+            // a position relative to the _eye_ (not look-at) position of the
+            // camera.
+            //
+            // Meanwhile shadows only current work in is_directional_light mode.
+            //
+            // If the user wants to flip back and forth between [positional lights
+            // without shadows] and [directional lights with shadows] then they
+            // can high-jack this key_pressed with a callback.
+            // 
+            // Until shadows support positional lights, let's switch to
+            // directional lights here and match the direction best as possible to
+            // the current light position.
+            core().is_directional_light = true;
+            core().light_position = core().light_position + core().camera_eye;
+            core().is_shadow_mapping = true;
+          }
+        }
         return true;
       }
       case 'T':
@@ -885,12 +928,14 @@ namespace glfw
     int width_window, height_window;
     glfwGetWindowSize(window, &width_window, &height_window);
 
-    auto highdpi_tmp = (width_window == 0 ||  width == 0) ? highdpi : (width/width_window);
+    auto highdpiw_tmp = (width_window == 0 ||  width == 0) ? highdpiw : (width/width_window);
+    auto highdpih_tmp = (height_window == 0 ||  height == 0) ? highdpih : (height/height_window);
 
-    if(fabs(highdpi_tmp-highdpi)>1e-8)
+    if(fabs(highdpiw_tmp-highdpiw)>1e-8 || fabs(highdpih_tmp-highdpih)>1e-8)
     {
       post_resize(width, height);
-      highdpi=highdpi_tmp;
+      highdpiw=highdpiw_tmp;
+      highdpih=highdpih_tmp;
     }
 
     for (auto& core : core_list)
@@ -910,6 +955,23 @@ namespace glfw
       if (callback_pre_draw(*this))
       {
         return;
+      }
+    }
+    
+    // Shadow pass
+    for (auto& core : core_list)
+    {
+      if(core.is_shadow_mapping)
+      {
+        core.initialize_shadow_pass();
+        for (auto& mesh : data_list)
+        {
+          if (mesh.is_visible & core.id)
+          {
+            core.draw_shadow_pass(mesh);
+          }
+        }
+        core.deinitialize_shadow_pass();
       }
     }
 
@@ -1095,7 +1157,7 @@ namespace glfw
   IGL_INLINE void Viewer::resize(int w,int h)
   {
     if (window) {
-      glfwSetWindowSize(window, w/highdpi, h/highdpi);
+      glfwSetWindowSize(window, w/highdpiw, h/highdpih);
     }
     post_resize(w, h);
   }

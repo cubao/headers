@@ -5,10 +5,10 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#include <igl/cut_mesh.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/HalfEdgeIterator.h>
-#include <igl/is_border_vertex.h>
+#include "cut_mesh.h"
+#include "triangle_triangle_adjacency.h"
+#include "HalfEdgeIterator.h"
+#include "is_border_vertex.h"
 
 // wrapper for input/output style
 template <typename DerivedV, typename DerivedF, typename DerivedC>
@@ -47,7 +47,6 @@ IGL_INLINE void igl::cut_mesh(
   const Eigen::MatrixBase<DerivedC>& C,
   Eigen::PlainObjectBase<DerivedI>& I
 ){
-  typedef typename DerivedF::Scalar Index;
   DerivedF FF, FFi;
   igl::triangle_triangle_adjacency(F,FF,FFi);
   igl::cut_mesh(V,F,FF,FFi,C,I);

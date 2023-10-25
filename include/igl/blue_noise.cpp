@@ -8,7 +8,6 @@
 #include "blue_noise.h"
 #include "doublearea.h"
 #include "random_points_on_mesh.h"
-#include "slice.h"
 #include "sortrows.h"
 #include "PI.h"
 #include "get_seconds.h"
@@ -71,7 +70,6 @@ namespace igl
     const int xi = Xs(i,0);
     const int yi = Xs(i,1);
     const int zi = Xs(i,2);
-    BlueNoiseKeyType k = blue_noise_key(w,xi,yi,zi);
     int g = 2; // ceil(r/s)
     for(int x = std::max(xi-g,0);x<=std::min(xi+g,w-1);x++)
     for(int y = std::max(yi-g,0);y<=std::min(yi+g,w-1);y++)
@@ -166,12 +164,14 @@ namespace igl
 
   template <
     typename DerivedX,
-    typename DerivedXs>
+    typename DerivedXs,
+    typename URBG>
   inline bool step(
     const Eigen::MatrixBase<DerivedX> & X,
     const Eigen::MatrixBase<DerivedXs> & Xs,
     const double & rr,
     const int & w,
+    URBG && urbg,
     std::unordered_map<BlueNoiseKeyType,std::vector<int> > & M,
     std::unordered_map<BlueNoiseKeyType,int> & S,
     std::vector<int> & active,
@@ -181,7 +181,8 @@ namespace igl
     //considered.clear();
     if(active.size() == 0) return false;
     // random entry
-    const int e = rand() % active.size();
+    std::uniform_int_distribution<> dis(0, active.size()-1);
+    const int e = dis(urbg);
     const int i = active[e];
     //printf("%d\n",i);
     const int xi = Xs(i,0);
@@ -210,8 +211,7 @@ namespace igl
     }
         //printf("  --------\n");
     // randomize order: this might be a little paranoid...
-    std::mt19937 twister;
-    std::shuffle(std::begin(N), std::end(N), twister);
+    std::shuffle(std::begin(N), std::end(N), urbg);
     bool found = false;
     for(const BlueNoiseKeyType & nk : N)
     {
@@ -243,17 +243,18 @@ template <
   typename DerivedF,
   typename DerivedB,
   typename DerivedFI,
-  typename DerivedP>
+  typename DerivedP,
+  typename URBG>
 IGL_INLINE void igl::blue_noise(
     const Eigen::MatrixBase<DerivedV> & V,
     const Eigen::MatrixBase<DerivedF> & F,
     const typename DerivedV::Scalar r,
     Eigen::PlainObjectBase<DerivedB> & B,
     Eigen::PlainObjectBase<DerivedFI> & FI,
-    Eigen::PlainObjectBase<DerivedP> & P)
+    Eigen::PlainObjectBase<DerivedP> & P,
+    URBG && urbg)
 {
   typedef typename DerivedV::Scalar Scalar;
-  typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
   // float+RowMajor is faster...
   typedef Eigen::Matrix<Scalar,Eigen::Dynamic,3,Eigen::RowMajor> MatrixX3S;
   assert(V.cols() == 3 && "Only 3D embeddings allowed");
@@ -279,7 +280,7 @@ IGL_INLINE void igl::blue_noise(
   const int nx = 30.0*expected_number_of_points;
   MatrixX3S X,XB;
   Eigen::VectorXi XFI;
-  igl::random_points_on_mesh(nx,V,F,XB,XFI,X);
+  igl::random_points_on_mesh(nx,V,F,XB,XFI,X,urbg);
 
   // Rescale so that s = 1
   Eigen::Matrix<int,Eigen::Dynamic,3,Eigen::RowMajor> Xs =
@@ -288,10 +289,10 @@ IGL_INLINE void igl::blue_noise(
   {
     Eigen::VectorXi I;
     igl::sortrows(decltype(Xs)(Xs),true,Xs,I);
-    igl::slice(decltype(X)(X),I,1,X);
+    X = X(I,Eigen::all).eval();
     // These two could be spun off in their own thread.
-    igl::slice(decltype(XB)(XB),I,1,XB);
-    igl::slice(decltype(XFI)(XFI),I,1,XFI);
+    XB = XB(I,Eigen::all).eval();
+    XFI = XFI(I,Eigen::all).eval();
   }
   // Initialization
   std::unordered_map<BlueNoiseKeyType,std::vector<int> > M;
@@ -350,7 +351,7 @@ IGL_INLINE void igl::blue_noise(
   {
     while(active.size()>0)
     {
-      step(X,Xs,rr,w,M,S,active,collected);
+      step(X,Xs,rr,w,urbg,M,S,active,collected);
     }
   }
   {
@@ -369,6 +370,7 @@ IGL_INLINE void igl::blue_noise(
 }
 
 #ifdef IGL_STATIC_LIBRARY
-template void igl::blue_noise<Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<float, -1, 3, 1, -1, 3>::Scalar, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
-template void igl::blue_noise<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<double, -1, -1, 0, -1, -1>::Scalar, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
+// Explicit template instantiation
+template void igl::blue_noise<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, std::mt19937_64 >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<double, -1, -1, 0, -1, -1>::Scalar, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, std::mt19937_64&&);
+template void igl::blue_noise<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, std::mt19937 >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<double, -1, -1, 0, -1, -1>::Scalar, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, std::mt19937&&);
 #endif

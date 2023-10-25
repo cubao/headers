@@ -24,9 +24,9 @@ namespace igl
       {
         // Forward declaration of the parent plugin
         class ImGuiPlugin;
-        // Abstract class for imgui "widgets". A widget is something that uses
-        // imgui, but doesn't own the entire imgui IO stack: the single
-        // ImGuiPlugin owns that and widgets are registered with it.
+        /// Abstract class for imgui "widgets". A widget is something that uses
+        /// imgui, but doesn't own the entire imgui IO stack: the single
+        /// ImGuiPlugin owns that and widgets are registered with it.
         class ImGuiWidget 
         {
           public:
@@ -36,17 +36,17 @@ namespace igl
               { viewer = _viewer; plugin = _plugin; }
             IGL_INLINE virtual void shutdown() {}
             IGL_INLINE virtual void draw() {}
-            IGL_INLINE virtual bool mouse_down(int button, int modifier)
+            IGL_INLINE virtual bool mouse_down(int /*button*/, int /*modifier*/)
               { return false;}
-            IGL_INLINE virtual bool mouse_up(int button, int modifier)
+            IGL_INLINE virtual bool mouse_up(int /*button*/, int /*modifier*/)
               { return false;}
-            IGL_INLINE virtual bool mouse_move(int mouse_x, int mouse_y)
+            IGL_INLINE virtual bool mouse_move(int /*mouse_x*/, int /*mouse_y*/)
               { return false;}
-            IGL_INLINE virtual bool key_pressed(unsigned int key, int modifiers)
+            IGL_INLINE virtual bool key_pressed(unsigned int /*key*/, int /*modifiers*/)
               { return false;}
-            IGL_INLINE virtual bool key_down(int key, int modifiers)
+            IGL_INLINE virtual bool key_down(int /*key*/, int /*modifiers*/)
               { return false;}
-            IGL_INLINE virtual bool key_up(int key, int modifiers)
+            IGL_INLINE virtual bool key_up(int /*key*/, int /*modifiers*/)
               { return false;}
             std::string name;
           protected:

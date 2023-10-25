@@ -2,6 +2,7 @@
 -   https://github.com/Neargye/nameof
 -   https://github.com/TartanLlama/optional
 -   https://github.com/Tencent/rapidjson/tree/00dbcf2c6e03c47d6c399338b6de060c71356464
+-   https://github.com/Tessil/ordered-map
 -   https://github.com/cubao/nano-fmm/blob/master/3rdparty/packedrtree.h
 -   https://github.com/district10/geojson-cpp/tree/fef5888142373cc07561987b8c8ba4bd64e2380b
 -   https://github.com/district10/geometry.hpp/tree/8949904a2b6e0295df2db09b06a643f573e714d0
@@ -9,6 +10,7 @@
 -   https://github.com/dpilger26/NumCpp
 -   https://github.com/felixguendling/cista
 -   https://github.com/gabime/spdlog/tree/v1.x/include/spdlog
+-   https://github.com/greg7mdp/parallel-hashmap.git
 -   https://github.com/lava/matplotlib-cpp
 -   https://github.com/libigl/libigl (no copyleft code)
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
@@ -19,6 +21,7 @@
 -   https://github.com/mapbox/variant/tree/a2a4858345423a760eca300ec42acad1ad123aa3
 -   https://github.com/mapbox/wagyu
 -   https://github.com/nlohmann/json/releases/tag/v3.11.2
+-   https://github.com/serge-sans-paille/frozen
 -   https://github.com/sharkdp/dbg-macro/tree/4db61805d90cb66d91bcc56c2703591a0127ed11
 -   https://github.com/taskflow/taskflow
 -   https://github.com/yuki-koyama/tinycolormap
@@ -26,6 +29,7 @@
 -   https://nemequ.github.io/hedley/
 -   https://raw.githubusercontent.com/Dobiasd/FunctionalPlus/master/include_all_in_one/include/fplus/fplus.hpp
 -   https://raw.githubusercontent.com/adamyaxley/Obfuscate/master/obfuscate.h
+-   https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp
 -   https://raw.githubusercontent.com/jlblancoc/nanoflann/master/include/nanoflann.hpp
 -   https://raw.githubusercontent.com/mapbox/eternal/master/include/mapbox/eternal.hpp
 -   https://raw.githubusercontent.com/mapbox/polylabel/master/include/mapbox/polylabel.hpp
@@ -33,3 +37,5 @@
 -   https://raw.githubusercontent.com/martinus/nanobench/v4.3.7/src/include/nanobench.h
 -   https://raw.githubusercontent.com/mourner/kdbush.hpp/master/include/kdbush.hpp
 -   https://raw.githubusercontent.com/p-ranav/indicators/master/single_include/indicators/indicators.hpp
+-   https://raw.githubusercontent.com/pantor/inja/master/single_include/inja/inja.hpp
+-   https://raw.githubusercontent.com/vimpunk/mio/master/single_include/mio/mio.hpp
