@@ -13,6 +13,7 @@
 -   https://github.com/greg7mdp/parallel-hashmap.git
 -   https://github.com/lava/matplotlib-cpp
 -   https://github.com/libigl/libigl (no copyleft code)
+-   https://github.com/madmann91/bvh
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
 -   https://github.com/mapbox/geojson-vt-cpp
 -   https://github.com/mapbox/gzip-hpp
