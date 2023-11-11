@@ -2,7 +2,9 @@
 -   https://github.com/Neargye/nameof
 -   https://github.com/TartanLlama/optional
 -   https://github.com/Tencent/rapidjson/tree/00dbcf2c6e03c47d6c399338b6de060c71356464
+-   https://github.com/Tessil/hopscotch-map
 -   https://github.com/Tessil/ordered-map
+-   https://github.com/Tessil/robin-map
 -   https://github.com/cubao/nano-fmm/blob/master/3rdparty/packedrtree.h
 -   https://github.com/district10/geojson-cpp/tree/fef5888142373cc07561987b8c8ba4bd64e2380b
 -   https://github.com/district10/geometry.hpp/tree/8949904a2b6e0295df2db09b06a643f573e714d0
@@ -13,6 +15,7 @@
 -   https://github.com/greg7mdp/parallel-hashmap.git
 -   https://github.com/lava/matplotlib-cpp
 -   https://github.com/libigl/libigl (no copyleft code)
+-   https://github.com/madmann91/bvh
 -   https://github.com/mapbox/cheap-ruler-cpp (modified)
 -   https://github.com/mapbox/geojson-vt-cpp
 -   https://github.com/mapbox/gzip-hpp
