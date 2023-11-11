@@ -2,6 +2,7 @@
 -   https://github.com/Neargye/nameof
 -   https://github.com/TartanLlama/optional
 -   https://github.com/Tencent/rapidjson/tree/00dbcf2c6e03c47d6c399338b6de060c71356464
+-   https://github.com/Tessil/hopscotch-map
 -   https://github.com/Tessil/ordered-map
 -   https://github.com/Tessil/robin-map
 -   https://github.com/cubao/nano-fmm/blob/master/3rdparty/packedrtree.h
