@@ -445,13 +445,16 @@ class PackedRTree
         return numNodes * sizeof(NodeItem);
     }
 
-    void streamWrite(const std::function<void(uint8_t *, size_t)> &writeData)
+    void streamWrite(const std::function<void(const uint8_t *, size_t)> &writeData) const
     {
-        writeData(reinterpret_cast<uint8_t *>(_nodeItems.data()),
+        writeData(reinterpret_cast<const uint8_t *>(_nodeItems.data()),
                   static_cast<size_t>(_numNodes * sizeof(NodeItem)));
     }
 
     NodeItem getExtent() const { return _extent; }
+    size_t getNumItems() const { return _numItems; }
+    size_t getNumNodes() const { return _numNodes; }
+    size_t getNodeSize() const { return _nodeSize; }
 };
 
 } // namespace FlatGeobuf
