@@ -95,6 +95,10 @@ struct NodeItem
             return false;
         return true;
     }
+    std::vector<double> toVector() const
+    {
+        return std::vector<double>{minX, minY, maxX, maxY};
+    }
 };
 
 inline bool operator==(const NodeItem &lhs, const NodeItem &rhs)
@@ -206,6 +210,14 @@ inline NodeItem calcExtent(const std::vector<NodeItem> &nodes)
         [](NodeItem a, const NodeItem &b) { return a.expand(b); });
 }
 
+inline NodeItem calcExtent(const std::vector<std::shared_ptr<Item>> &items)
+{
+    return std::accumulate(items.begin(), items.end(), NodeItem::create(0),
+                           [](NodeItem a, const std::shared_ptr<Item> &b) {
+                               return a.expand(b->nodeItem);
+                           });
+}
+
 template <class ITEM_TYPE> void hilbertSort(std::deque<ITEM_TYPE> &items)
 {
     NodeItem extent = calcExtent(items);
@@ -242,6 +254,28 @@ inline void hilbertSort(std::vector<NodeItem> &items)
 {
     hilbertSort(items, calcExtent(items));
 }
+
+inline void hilbertSort(std::vector<std::shared_ptr<Item>> &items, const NodeItem &extent)
+{
+    const double minX = extent.minX;
+    const double minY = extent.minY;
+    const double width = extent.width();
+    const double height = extent.height();
+    std::sort(items.begin(), items.end(),
+              [minX, minY, width, height](std::shared_ptr<Item> a,
+                                          std::shared_ptr<Item> b) {
+                  uint32_t ha = hilbert(a->nodeItem, HILBERT_MAX, minX, minY,
+                                        width, height);
+                  uint32_t hb = hilbert(b->nodeItem, HILBERT_MAX, minX, minY,
+                                        width, height);
+                  return ha > hb;
+              });
+}
+
+inline void hilbertSort(std::vector<std::shared_ptr<Item>> &items) {
+    return hilbertSort(items, calcExtent(items));
+}
+
 
 /**
  * Packed R-Tree
@@ -301,6 +335,16 @@ class PackedRTree
         init(nodeSize);
         for (size_t i = 0; i < _numItems; i++)
             _nodeItems[_numNodes - _numItems + i] = nodes[i];
+        generateNodes();
+    }
+
+    PackedRTree(const std::vector<std::shared_ptr<Item>> &items,
+                const NodeItem &extent, const uint16_t nodeSize = 16)
+        : _extent(extent), _numItems(items.size())
+    {
+        init(nodeSize);
+        for (size_t i = 0; i < _numItems; i++)
+            _nodeItems[_numNodes - _numItems + i] = items[i]->nodeItem;
         generateNodes();
     }
 
@@ -403,7 +447,7 @@ class PackedRTree
 
     void streamWrite(const std::function<void(uint8_t *, size_t)> &writeData)
     {
-        writeData(reinterpret_cast<uint8_t *>(&_nodeItems[0]),
+        writeData(reinterpret_cast<uint8_t *>(_nodeItems.data()),
                   static_cast<size_t>(_numNodes * sizeof(NodeItem)));
     }
 
