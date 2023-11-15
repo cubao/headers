@@ -108,6 +108,11 @@ inline bool operator==(const NodeItem &lhs, const NodeItem &rhs)
            lhs.offset == rhs.offset;
 }
 
+inline bool operator!=(const NodeItem &lhs, const NodeItem &rhs)
+{
+    return !(lhs == rhs);
+}
+
 struct Item
 {
     NodeItem nodeItem;
@@ -122,6 +127,11 @@ struct SearchResultItem
 inline bool operator==(const SearchResultItem &lhs, const SearchResultItem &rhs)
 {
     return lhs.index == rhs.index && lhs.offset == rhs.offset;
+}
+
+inline bool operator!=(const SearchResultItem &lhs, const SearchResultItem &rhs)
+{
+    return !(lhs == rhs);
 }
 
 // Based on public domain code at
@@ -328,6 +338,7 @@ class PackedRTree
     }
 
   public:
+    PackedRTree() = default;
     PackedRTree(const std::vector<NodeItem> &nodes, const NodeItem &extent,
                 const uint16_t nodeSize = 16)
         : _extent(extent), _numItems(nodes.size())
