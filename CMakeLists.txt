@@ -38,23 +38,8 @@ if(CBH_CREATE_INSTALL_RULES AND NOT CMAKE_SKIP_INSTALL_RULES)
   # Normally these would be configurable by the user, but we can't allow that
   # because the lookup paths are hard-coded in 'cmake/cubao_headers-config.cmake'
   set(CMAKE_INSTALL_INCLUDEDIR "${CBH_INSTALL_DATADIR}/include")
-  set(CBH_INSTALL_SRCDIR "${CBH_INSTALL_DATADIR}/src")
-  set(CBH_INSTALL_EXTDIR "${CBH_INSTALL_DATADIR}/ext")
-  set(CBH_INSTALL_CMAKEDIR "${CBH_INSTALL_DATADIR}/cmake")
-
   install(
     DIRECTORY include/
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  )
-
-  install(
-    DIRECTORY src/
-    DESTINATION "${CBH_INSTALL_SRCDIR}"
-    PATTERN "*.py" EXCLUDE
-  )
-
-  install(
-    DIRECTORY cmake/
-    DESTINATION "${CBH_INSTALL_CMAKEDIR}"
   )
 endif()
