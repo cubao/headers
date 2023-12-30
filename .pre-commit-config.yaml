@@ -16,7 +16,7 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
 
-exclude: '(?x)^3rdparty/(Eigen/.*|.*\..*|rapidjson/.*|spdlog/.*|tl/.*)$'
+exclude: '(?x)^include/.*$'
 
 repos:
 # Standard hooks
