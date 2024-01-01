@@ -17,7 +17,7 @@ with TemporaryDirectory() as temp_dir:
 
     setup(
         name="cubao_headers",
-        version="0.0.1",
+        version="0.0.2",
         author="district10",
         author_email="dvorak4tzx@gmail.com",
         description="Universal headers used by cubao team.",
