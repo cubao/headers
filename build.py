@@ -6,7 +6,7 @@ head = '''#!/usr/bin/env python3
 from setuptools import setup, find_packages
 
 name = "cubao_headers"
-version = "0.0.3"
+version = "0.0.4"
 
 pattern = ["*"]
 
