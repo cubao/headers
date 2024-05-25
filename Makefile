@@ -14,4 +14,4 @@ force_clean:
 package:
 	mkdir -p src/cubao_headers
 	cp -rf include src/cubao_headers
-	python3 build.py
+	python3 build.py > setup.py
