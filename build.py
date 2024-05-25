@@ -6,7 +6,7 @@ head = '''#!/usr/bin/env python3
 from setuptools import setup, find_packages
 
 name = "cubao_headers"
-version = "0.0.3"
+version = "0.0.4"
 
 pattern = ["*"]
 
@@ -18,8 +18,22 @@ print(head)
 os.chdir('cubao_headers/include')
 path = f'__init__.py'
 Path(path).touch()
-path = f'../__init__.py'
-Path(path).touch()
+
+lines = '''import os
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def get_include() -> str:
+    installed_path = os.path.join(DIR, "include")
+    source_path = os.path.join(os.path.dirname(DIR), "include")
+    return installed_path if os.path.exists(installed_path) else source_path
+'''
+
+with open('../__init__.py', 'w') as f:
+    f.write(lines)
+
+
 packages = ['f"{name}"', 'f"{name}.include"']
 prefix = '        '
 
