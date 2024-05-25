@@ -1,6 +1,6 @@
 .vscode
 build
 *.egg-info
-src
+cubao_headers
 setup.py
 dist

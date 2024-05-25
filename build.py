@@ -15,7 +15,7 @@ setup(
     version=version,'''
 print(head)
 
-os.chdir('src/cubao_headers/include')
+os.chdir('cubao_headers/include')
 path = f'__init__.py'
 Path(path).touch()
 path = f'../__init__.py'
