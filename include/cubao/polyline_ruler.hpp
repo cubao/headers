@@ -24,6 +24,24 @@ using RowVectors = Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>;
 using RowVectorsNx3 = RowVectors;
 using RowVectorsNx2 = Eigen::Matrix<double, Eigen::Dynamic, 2, Eigen::RowMajor>;
 
+inline std::tuple<Eigen::Vector2d, double, double>
+snap_onto_2d(const Eigen::Vector2d &P, //
+             const Eigen::Vector2d &A, const Eigen::Vector2d &B)
+{
+    Eigen::Vector2d AB = B - A;
+    double dot = (P - A).dot(AB);
+    if (dot <= 0) {
+        return std::make_tuple(A, (P - A).norm(), 0.0);
+    }
+    double len2 = AB.squaredNorm();
+    if (dot >= len2) {
+        return std::make_tuple(B, (P - B).norm(), 1.0);
+    }
+    double inv_len2 = 1.0 / len2;
+    Eigen::Vector2d PP = A + (dot * inv_len2 * AB);
+    return std::make_tuple(PP, (PP - P).norm(), dot * inv_len2);
+}
+
 // https://github.com/anvaka/isect/blob/80832e75bf8f197845e52ea52c6ca72935abb24a/build/isect.js#L869
 // https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/1968345#1968345
 // https://coliru.stacked-crooked.com/a/624e6e0eabc8a103
@@ -45,6 +63,30 @@ intersect_segments(const Eigen::Vector2d &a1, const Eigen::Vector2d &a2,
     double s2_y = b2[1] - b1[1];
     double div = s1_x * s2_y - s2_x * s1_y;
     if (div == 0.0) {
+        bool dup_a = s1_x == 0.0 && s1_y == 0.0;
+        bool dup_b = s2_x == 0.0 && s2_y == 0.0;
+        if (dup_a && dup_b) {
+            if (a1 != b1) {
+                return {};
+            }
+            return std::make_tuple(a1, 0.5, 0.5);
+        } else if (dup_a) {
+            auto P_d_t = snap_onto_2d(a1, b1, b2);
+            if (std::get<1>(P_d_t) != 0.0) {
+                return {};
+            }
+            auto &P = std::get<0>(P_d_t);
+            auto t = std::get<2>(P_d_t);
+            return std::make_tuple(P, 0.5, t);
+        } else if (dup_b) {
+            auto P_d_t = snap_onto_2d(b1, a1, a2);
+            if (std::get<1>(P_d_t) != 0.0) {
+                return {};
+            }
+            auto &P = std::get<0>(P_d_t);
+            auto t = std::get<2>(P_d_t);
+            return std::make_tuple(P, t, 0.5);
+        }
         // s1.x/s1.y == s2.x/s2.y => parallel
         // this may be trivial, but we try to handle it properly
         // a1 o--------o a2
