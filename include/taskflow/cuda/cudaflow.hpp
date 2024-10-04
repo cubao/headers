@@ -54,34 +54,11 @@ in parallel scheduled by the CUDA runtime.
 Please refer to @ref GPUTaskingcudaFlow for details.
 */
 class cudaFlow {
-
-  friend class Executor;
   
-  // created by user
-  struct External {
-    cudaGraph graph;
-  };
-  
-  // created by executor
-  struct Internal {
-    Internal(Executor& e) : executor{e} {}
-    Executor& executor;
-  };
-
-  using handle_t = std::variant<External, Internal>;
-  
-  // variant index
-  constexpr static auto EXTERNAL = get_index_v<External, handle_t>;
-  constexpr static auto INTERNAL = get_index_v<Internal, handle_t>;
-
   public:
 
     /**
-    @brief constructs a standalone %cudaFlow
-
-    A standalone %cudaFlow does not go through any taskflow and
-    can be run by the caller thread using explicit offload methods
-    (e.g., tf::cudaFlow::offload).
+    @brief constructs a %cudaFlow
     */
     cudaFlow();
 
@@ -89,7 +66,17 @@ class cudaFlow {
     @brief destroys the %cudaFlow and its associated native CUDA graph
            and executable graph
      */
-    ~cudaFlow();
+    ~cudaFlow() = default;
+
+    /**
+    @brief default move constructor
+    */
+    cudaFlow(cudaFlow&&) = default;
+    
+    /**
+    @brief default move assignment operator
+    */
+    cudaFlow& operator = (cudaFlow&&) = default;
 
     /**
     @brief queries the emptiness of the graph
@@ -179,7 +166,7 @@ class cudaFlow {
     @return a tf::cudaTask handle
     */
     template <typename F, typename... ArgsT>
-    cudaTask kernel(dim3 g, dim3 b, size_t s, F f, ArgsT&&... args);
+    cudaTask kernel(dim3 g, dim3 b, size_t s, F f, ArgsT... args);
 
     /**
     @brief updates parameters of a kernel task
@@ -190,7 +177,7 @@ class cudaFlow {
     */
     template <typename F, typename... ArgsT>
     void kernel(
-      cudaTask task, dim3 g, dim3 b, size_t shm, F f, ArgsT&&... args
+      cudaTask task, dim3 g, dim3 b, size_t shm, F f, ArgsT... args
     );
 
     /**
@@ -344,41 +331,31 @@ class cudaFlow {
     void copy(cudaTask task, T* tgt, const T* src, size_t num);
 
     // ------------------------------------------------------------------------
-    // offload methods
+    // run method
     // ------------------------------------------------------------------------
-
     /**
-    @brief offloads the %cudaFlow onto a GPU and repeatedly runs it until
-    the predicate becomes true
+    @brief offloads the %cudaFlow onto a GPU asynchronously via a stream
 
-    @tparam P predicate type (a binary callable)
+    @param stream stream for performing this operation
 
-    @param predicate a binary predicate (returns @c true for stop)
-
-    Immediately offloads the present %cudaFlow onto a GPU and
-    repeatedly runs it until the predicate returns @c true.
+    Offloads the present %cudaFlow onto a GPU asynchronously via
+    the given stream.
 
     An offloaded %cudaFlow forces the underlying graph to be instantiated.
     After the instantiation, you should not modify the graph topology
     but update node parameters.
-
-    By default, if users do not offload the %cudaFlow,
-    the executor will offload it once.
     */
-    template <typename P>
-    void offload_until(P&& predicate);
+    void run(cudaStream_t stream);
 
     /**
-    @brief offloads the %cudaFlow and executes it by the given times
-
-    @param N number of executions
+    @brief acquires a reference to the underlying CUDA graph
     */
-    void offload_n(size_t N);
+    cudaGraph_t native_graph();
 
     /**
-    @brief offloads the %cudaFlow and executes it once
+    @brief acquires a reference to the underlying CUDA graph executable
     */
-    void offload();
+    cudaGraphExec_t native_executable();
 
     // ------------------------------------------------------------------------
     // generic algorithms
@@ -555,546 +532,6 @@ class cudaFlow {
       cudaTask task, I1 first1, I1 last1, I2 first2, O output, C c
     );
 
-    /**
-    @brief performs parallel reduction over a range of items
-
-    @tparam I input iterator type
-    @tparam T value type
-    @tparam B binary operator type
-
-    @param first iterator to the beginning (inclusive)
-    @param last iterator to the end (exclusive)
-    @param result pointer to the result with an initialized value
-    @param bop binary operator to apply to reduce items
-
-    @return a tf::cudaTask handle
-
-    This method is equivalent to the parallel execution of the following loop on a GPU:
-
-    @code{.cpp}
-    while (first != last) {
-      *result = bop(*result, *first++);
-    }
-    @endcode
-    */
-    template <typename I, typename T, typename B>
-    cudaTask reduce(I first, I last, T* result, B bop);
-
-    /**
-    @brief updates parameters of a kernel task created from
-           tf::cudaFlow::reduce
-
-    The type of the iterators, result, and callable must be the same as
-    the task created from tf::cudaFlow::reduce.
-    */
-    template <typename I, typename T, typename C>
-    void reduce(cudaTask task, I first, I last, T* result, C op);
-
-    /**
-    @brief similar to tf::cudaFlow::reduce but does not assume any initial
-           value to reduce
-
-    This method is equivalent to the parallel execution of the following loop
-    on a GPU:
-
-    @code{.cpp}
-    *result = *first++;  // no initial values partitipcate in the loop
-    while (first != last) {
-      *result = op(*result, *first++);
-    }
-    @endcode
-    */
-    template <typename I, typename T, typename B>
-    cudaTask uninitialized_reduce(I first, I last, T* result, B bop);
-
-    /**
-    @brief updates parameters of a kernel task created from
-           tf::cudaFlow::uninitialized_reduce
-
-    The type of the iterators, result, and callable must be the same as
-    the task created from tf::cudaFlow::uninitialized_reduce.
-    */
-    template <typename I, typename T, typename C>
-    void uninitialized_reduce(
-      cudaTask task, I first, I last, T* result, C op
-    );
-
-    /**
-    @brief performs parallel reduction over a range of transformed items
-
-    @tparam I input iterator type
-    @tparam T value type
-    @tparam B binary operator type
-    @tparam U unary operator type
-
-    @param first iterator to the beginning (inclusive)
-    @param last iterator to the end (exclusive)
-    @param result pointer to the result with an initialized value
-    @param bop binary operator to apply to reduce items
-    @param uop unary operator to transform each item before reduction
-
-    @return a tf::cudaTask handle
-
-    This method is equivalent to the parallel execution of the following loop on a GPU:
-
-    @code{.cpp}
-    while (first != last) {
-      *result = bop(*result, uop(*first++));
-    }
-    @endcode
-    */
-    template <typename I, typename T, typename B, typename U>
-    cudaTask transform_reduce(I first, I last, T* result, B bop, U uop);
-
-    /**
-    @brief updates parameters of a kernel task created from
-           tf::cudaFlow::transform_reduce
-    */
-    template <typename I, typename T, typename B, typename U>
-    void transform_reduce(cudaTask, I first, I last, T* result, B bop, U uop);
-
-    /**
-    @brief similar to tf::cudaFlow::transform_reduce but does not assume any initial
-           value to reduce
-
-    This method is equivalent to the parallel execution of the following loop
-    on a GPU:
-
-    @code{.cpp}
-    *result = uop(*first++);  // no initial values partitipcate in the loop
-    while (first != last) {
-      *result = bop(*result, uop(*first++));
-    }
-    @endcode
-    */
-    template <typename I, typename T, typename B, typename U>
-    cudaTask transform_uninitialized_reduce(
-      I first, I last, T* result, B bop, U uop
-    );
-
-    /**
-    @brief updates parameters of a kernel task created from
-           tf::cudaFlow::transform_uninitialized_reduce
-    */
-    template <typename I, typename T, typename B, typename U>
-    void transform_uninitialized_reduce(
-      cudaTask task, I first, I last, T* result, B bop, U uop
-    );
-
-    /**
-    @brief creates a task to perform parallel inclusive scan
-           over a range of items
-
-    @tparam I input iterator type
-    @tparam O output iterator type
-    @tparam C binary operator type
-
-    @param first iterator to the beginning
-    @param last iterator to the end
-    @param output iterator to the beginning of the output
-    @param op binary operator
-
-    @return a tf::cudaTask handle
-
-    This method is equivalent to the parallel execution of the following loop on a GPU:
-
-    @code{.cpp}
-    for(size_t i=0; i<std::distance(first, last); i++) {
-      *(output + i) = i ? op(*(first+i), *(output+i-1)) : *(first+i);
-    }
-    @endcode
-    */
-    template <typename I, typename O, typename C>
-    cudaTask inclusive_scan(I first, I last, O output, C op);
-
-    /**
-    @brief updates the parameters of a task created
-           from tf::cudaFlow::inclusive_scan
-
-    This method is similar to tf::cudaFlow::inclusive_scan
-    but operates on an existing task.
-    */
-    template <typename I, typename O, typename C>
-    void inclusive_scan(cudaTask task, I first, I last, O output, C op);
-
-    /**
-    @brief similar to cudaFlow::inclusive_scan but excludes the first value
-    */
-    template <typename I, typename O, typename C>
-    cudaTask exclusive_scan(I first, I last, O output, C op);
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::exclusive_scan
-
-    This method is similar to tf::cudaFlow::exclusive_scan
-    but operates on an existing task.
-    */
-    template <typename I, typename O, typename C>
-    void exclusive_scan(cudaTask task, I first, I last, O output, C op);
-
-    /**
-    @brief creates a task to perform parallel inclusive scan
-           over a range of transformed items
-
-    @tparam I input iterator type
-    @tparam O output iterator type
-    @tparam B binary operator type
-    @tparam U unary operator type
-
-    @param first iterator to the beginning
-    @param last iterator to the end
-    @param output iterator to the beginning of the output
-    @param bop binary operator
-    @param uop unary operator
-
-    @return a tf::cudaTask handle
-
-    This method is equivalent to the parallel execution of the following loop
-    on a GPU:
-
-    @code{.cpp}
-    for(size_t i=0; i<std::distance(first, last); i++) {
-      *(output + i) = i ? op(uop(*(first+i)), *(output+i-1)) : uop(*(first+i));
-    }
-    @endcode
-     */
-    template <typename I, typename O, typename B, typename U>
-    cudaTask transform_inclusive_scan(I first, I last, O output, B bop, U uop);
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::transform_inclusive_scan
-
-    This method is similar to tf::cudaFlow::transform_inclusive_scan
-    but operates on an existing task.
-    */
-    template <typename I, typename O, typename B, typename U>
-    void transform_inclusive_scan(
-      cudaTask task, I first, I last, O output, B bop, U uop
-    );
-
-    /**
-    @brief similar to cudaFlow::transform_inclusive_scan but
-           excludes the first value
-    */
-    template <typename I, typename O, typename B, typename U>
-    cudaTask transform_exclusive_scan(I first, I last, O output, B bop, U uop);
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::transform_exclusive_scan
-
-    This method is similar to tf::cudaFlow::transform_exclusive_scan
-    but operates on an existing task.
-    */
-    template <typename I, typename O, typename B, typename U>
-    void transform_exclusive_scan(
-      cudaTask task, I first, I last, O output, B bop, U uop
-    );
-
-    /**
-    @brief creates a task to perform parallel merge on two sorted arrays
-
-    @tparam A iterator type of the first input array
-    @tparam B iterator type of the second input array
-    @tparam C iterator type of the output array
-    @tparam Comp comparator type
-
-    @param a_first iterator to the beginning of the first input array
-    @param a_last iterator to the end of the first input array
-    @param b_first iterator to the beginning of the second input array
-    @param b_last iterator to the end of the second input array
-    @param c_first iterator to the beginning of the output array
-    @param comp binary comparator
-
-    @return a tf::cudaTask handle
-
-    Merges two sorted ranges <tt>[a_first, a_last)</tt> and
-    <tt>[b_first, b_last)</tt> into one sorted range beginning at @c c_first.
-
-    A sequence is said to be sorted with respect to a comparator @c comp
-    if for any iterator it pointing to the sequence and
-    any non-negative integer @c n such that <tt>it + n</tt> is a valid iterator
-    pointing to an element of the sequence, <tt>comp(*(it + n), *it)</tt>
-    evaluates to false.
-     */
-    template <typename A, typename B, typename C, typename Comp>
-    cudaTask merge(A a_first, A a_last, B b_first, B b_last, C c_first, Comp comp);
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::merge
-
-    This method is similar to tf::cudaFlow::merge but operates on
-    an existing task.
-    */
-    template <typename A, typename B, typename C, typename Comp>
-    void merge(
-      cudaTask task, A a_first, A a_last, B b_first, B b_last, C c_first, Comp comp
-    );
-
-    /**
-    @brief creates a task to perform parallel sort an array
-
-    @tparam I iterator type of the first input array
-    @tparam C comparator type
-
-    @param first iterator to the beginning of the input array
-    @param last iterator to the end of the input array
-    @param comp binary comparator
-
-    @return a tf::cudaTask handle
-
-    Sorts elements in the range <tt>[first, last)</tt>
-    with the given comparator @c comp.
-     */
-    template <typename I, typename C>
-    cudaTask sort(I first, I last, C comp);
-
-    /**
-    @brief updates the parameters of the task created from
-           tf::cudaFlow::sort
-
-    This method is similar to tf::cudaFlow::sort but operates on
-    an existing task.
-    */
-    template <typename I, typename C>
-    void sort(cudaTask task, I first, I last, C comp);
-
-    /**
-    @brief creates kernels that sort the given array
-
-    @tparam K_it iterator type of the key
-    @tparam V_it iterator type of the value
-    @tparam C comparator type
-
-    @param k_first iterator to the beginning of the key array
-    @param k_last iterator to the end of the key array
-    @param v_first iterator to the beginning of the value array
-    @param comp binary comparator
-
-    @return a tf::cudaTask handle
-
-    Sorts key-value elements in <tt>[k_first, k_last)</tt> and
-    <tt>[v_first, v_first + (k_last - k_first))</tt> into ascending key order
-    using the given comparator @c comp.
-    If @c i and @c j are any two valid iterators in <tt>[k_first, k_last)</tt>
-    such that @c i precedes @c j, and @c p and @c q are iterators in
-    <tt>[v_first, v_first + (k_last - k_first))</tt> corresponding to
-    @c i and @c j respectively, then <tt>comp(*j, *i)</tt> evaluates to @c false.
-
-    For example, assume:
-      + @c keys are <tt>{1, 4, 2, 8, 5, 7}</tt>
-      + @c values are <tt>{'a', 'b', 'c', 'd', 'e', 'f'}</tt>
-
-    After sort:
-      + @c keys are <tt>{1, 2, 4, 5, 7, 8}</tt>
-      + @c values are <tt>{'a', 'c', 'b', 'e', 'f', 'd'}</tt>
-    */
-    template <typename K_it, typename V_it, typename C>
-    cudaTask sort_by_key(K_it k_first, K_it k_last, V_it v_first, C comp);
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::sort_by_key
-
-    This method is similar to tf::cudaFlow::sort_by_key but operates on
-    an existing task.
-    */
-    template <typename K_it, typename V_it, typename C>
-    void sort_by_key(
-      cudaTask task, K_it k_first, K_it k_last, V_it v_first, C comp
-    );
-
-    /**
-    @brief creates a task to perform parallel key-value merge
-
-    @tparam a_keys_it first key iterator type
-    @tparam a_vals_it first value iterator type
-    @tparam b_keys_it second key iterator type
-    @tparam b_vals_it second value iterator type
-    @tparam c_keys_it output key iterator type
-    @tparam c_vals_it output value iterator type
-    @tparam C comparator type
-
-    @param a_keys_first iterator to the beginning of the first key range
-    @param a_keys_last iterator to the end of the first key range
-    @param a_vals_first iterator to the beginning of the first value range
-    @param b_keys_first iterator to the beginning of the second key range
-    @param b_keys_last iterator to the end of the second key range
-    @param b_vals_first iterator to the beginning of the second value range
-    @param c_keys_first iterator to the beginning of the output key range
-    @param c_vals_first iterator to the beginning of the output value range
-    @param comp comparator
-
-    Performs a key-value merge that copies elements from
-    <tt>[a_keys_first, a_keys_last)</tt> and <tt>[b_keys_first, b_keys_last)</tt>
-    into a single range, <tt>[c_keys_first, c_keys_last + (a_keys_last - a_keys_first) + (b_keys_last - b_keys_first))</tt>
-    such that the resulting range is in ascending key order.
-
-    At the same time, the merge copies elements from the two associated ranges
-    <tt>[a_vals_first + (a_keys_last - a_keys_first))</tt> and
-    <tt>[b_vals_first + (b_keys_last - b_keys_first))</tt> into a single range,
-    <tt>[c_vals_first, c_vals_first + (a_keys_last - a_keys_first) + (b_keys_last - b_keys_first))</tt>
-    such that the resulting range is in ascending order
-    implied by each input element's associated key.
-
-    For example, assume:
-      + @c a_keys = <tt>{8, 1}</tt>
-      + @c a_vals = <tt>{1, 2}</tt>
-      + @c b_keys = <tt>{3, 7}</tt>
-      + @c b_vals = <tt>{3, 4}</tt>
-
-    After the merge, we have:
-      + @c c_keys = <tt>{1, 3, 7, 8}</tt>
-      + @c c_vals = <tt>{2, 3, 4, 1}</tt>
-    */
-    template<
-      typename a_keys_it, typename a_vals_it,
-      typename b_keys_it, typename b_vals_it,
-      typename c_keys_it, typename c_vals_it,
-      typename C
-    >
-    cudaTask merge_by_key(
-      a_keys_it a_keys_first, a_keys_it a_keys_last, a_vals_it a_vals_first,
-      b_keys_it b_keys_first, b_keys_it b_keys_last, b_vals_it b_vals_first,
-      c_keys_it c_keys_first, c_vals_it c_vals_first, C comp
-    );
-
-    /**
-    @brief updates the parameters of a task created from
-           tf::cudaFlow::merge_by_key
-
-    This method is similar to tf::cudaFlow::merge_by_key but operates
-    on an existing task.
-    */
-    template<
-      typename a_keys_it, typename a_vals_it,
-      typename b_keys_it, typename b_vals_it,
-      typename c_keys_it, typename c_vals_it,
-      typename C
-    >
-    void merge_by_key(
-      cudaTask task,
-      a_keys_it a_keys_first, a_keys_it a_keys_last, a_vals_it a_vals_first,
-      b_keys_it b_keys_first, b_keys_it b_keys_last, b_vals_it b_vals_first,
-      c_keys_it c_keys_first, c_vals_it c_vals_first, C comp
-    );
-
-    /**
-    @brief creates a task to find the index of the first element in a range
-
-    @tparam I input iterator type
-    @tparam U unary operator type
-
-    @param first iterator to the beginning of the range
-    @param last iterator to the end of the range
-    @param idx pointer to the index of the found element
-    @param op unary operator which returns @c true for the required element
-
-    Finds the index @c idx of the first element in the range
-    <tt>[first, last)</tt> such that <tt>op(*(first+idx))</tt> is true.
-    This is equivalent to the parallel execution of the following loop:
-
-    @code{.cpp}
-    unsigned idx = 0;
-    for(; first != last; ++first, ++idx) {
-      if (p(*first)) {
-        return idx;
-      }
-    }
-    return idx;
-    @endcode
-    */
-    template <typename I, typename U>
-    cudaTask find_if(I first, I last, unsigned* idx, U op);
-
-    /**
-    @brief updates the parameters of the task created from
-           tf::cudaFlow::find_if
-    */
-    template <typename I, typename U>
-    void find_if(cudaTask task, I first, I last, unsigned* idx, U op);
-
-    /**
-    @brief finds the index of the minimum element in a range
-
-    @tparam I input iterator type
-    @tparam O comparator type
-
-    @param first iterator to the beginning of the range
-    @param last iterator to the end of the range
-    @param idx solution index of the minimum element
-    @param op comparison function object
-
-    The function launches kernels asynchronously to find
-    the smallest element in the range <tt>[first, last)</tt>
-    using the given comparator @c op.
-    The function is equivalent to a parallel execution of the following loop:
-
-    @code{.cpp}
-    if(first == last) {
-      return 0;
-    }
-    auto smallest = first;
-    for (++first; first != last; ++first) {
-      if (op(*first, *smallest)) {
-        smallest = first;
-      }
-    }
-    return std::distance(first, smallest);
-    @endcode
-    */
-    template <typename I, typename O>
-    cudaTask min_element(I first, I last, unsigned* idx, O op);
-
-    /**
-    @brief updates the parameters of the task created from
-           tf::cudaFlow::min_element
-     */
-    template <typename I, typename O>
-    void min_element(cudaTask task, I first, I last, unsigned* idx, O op);
-
-    /**
-    @brief finds the index of the maximum element in a range
-
-    @tparam I input iterator type
-    @tparam O comparator type
-
-    @param first iterator to the beginning of the range
-    @param last iterator to the end of the range
-    @param idx solution index of the maximum element
-    @param op comparison function object
-
-    The function launches kernels asynchronously to find
-    the largest element in the range <tt>[first, last)</tt>
-    using the given comparator @c op.
-    The function is equivalent to a parallel execution of the following loop:
-
-    @code{.cpp}
-    if(first == last) {
-      return 0;
-    }
-    auto largest = first;
-    for (++first; first != last; ++first) {
-      if (op(*largest, *first)) {
-        largest = first;
-      }
-    }
-    return std::distance(first, largest);
-    @endcode
-    */
-    template <typename I, typename O>
-    cudaTask max_element(I first, I last, unsigned* idx, O op);
-
-    /**
-    @brief updates the parameters of the task created from
-           tf::cudaFlow::max_element
-     */
-    template <typename I, typename O>
-    void max_element(cudaTask task, I first, I last, unsigned* idx, O op);
-
     // ------------------------------------------------------------------------
     // subflow
     // ------------------------------------------------------------------------
@@ -1147,83 +584,40 @@ class cudaFlow {
 
   private:
 
-    handle_t _handle;
-    cudaGraph& _graph;
-    cudaGraphExec _exec {nullptr};
-
-    cudaFlow(cudaGraph&, Executor&);
-    
-    template <typename P>
-    void _offload_until_external(P&&);
-    
-    template <typename P>
-    void _offload_until_internal(P&&);
+    cudaFlowGraph _cfg;
+    cudaGraphExec _exe {nullptr};
 };
 
 // Construct a standalone cudaFlow
-inline cudaFlow::cudaFlow() :
-  _handle {std::in_place_type_t<External>{}},
-  _graph  {std::get_if<External>(&_handle)->graph} {
-
-  TF_CHECK_CUDA(
-    cudaGraphCreate(&_graph._native_handle, 0),
-    "cudaFlow failed to create a native graph (external mode)"
-  );
-}
-
-// Construct the cudaFlow from executor (internal graph)
-inline cudaFlow::cudaFlow(cudaGraph& g, Executor& executor) :
-  _handle {std::in_place_type_t<Internal>{}, executor},
-  _graph  {g} {
-
-  assert(_graph._native_handle == nullptr);
-
-  TF_CHECK_CUDA(
-    cudaGraphCreate(&_graph._native_handle, 0),
-    "failed to create a native graph (internal mode)"
-  );
-}
-
-// Destructor
-inline cudaFlow::~cudaFlow() {
-  cudaGraphDestroy(_graph._native_handle);
-  _graph._native_handle = nullptr;
+inline cudaFlow::cudaFlow() {
+  _cfg._native_handle.create();
 }
 
 // Procedure: clear
 inline void cudaFlow::clear() {
-
-  _exec.clear();
-
-  TF_CHECK_CUDA(
-    cudaGraphDestroy(_graph._native_handle), "failed to destroy native graph"
-  );
-
-  TF_CHECK_CUDA(
-    cudaGraphCreate(&_graph._native_handle, 0), "failed to create native graph"
-  );
-
-  _graph._nodes.clear();
+  _exe.clear();
+  _cfg.clear();
+  _cfg._native_handle.create();
 }
 
 // Function: empty
 inline bool cudaFlow::empty() const {
-  return _graph._nodes.empty();
+  return _cfg._nodes.empty();
 }
 
 // Function: num_tasks
 inline size_t cudaFlow::num_tasks() const {
-  return _graph._nodes.size();
+  return _cfg._nodes.size();
 }
 
 // Procedure: dump
 inline void cudaFlow::dump(std::ostream& os) const {
-  _graph.dump(os, nullptr, "");
+  _cfg.dump(os, nullptr, "");
 }
 
 // Procedure: dump
 inline void cudaFlow::dump_native_graph(std::ostream& os) const {
-  cuda_dump_graph(os, _graph._native_handle);
+  cuda_dump_graph(os, _cfg._native_handle);
 }
 
 // ----------------------------------------------------------------------------
@@ -1233,13 +627,13 @@ inline void cudaFlow::dump_native_graph(std::ostream& os) const {
 // Function: noop
 inline cudaTask cudaFlow::noop() {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Empty>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Empty>{}
   );
 
   TF_CHECK_CUDA(
     cudaGraphAddEmptyNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0
+      &node->_native_handle, _cfg._native_handle, nullptr, 0
     ),
     "failed to create a no-operation (empty) node"
   );
@@ -1251,19 +645,19 @@ inline cudaTask cudaFlow::noop() {
 template <typename C>
 cudaTask cudaFlow::host(C&& c) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Host>{}, std::forward<C>(c)
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Host>{}, std::forward<C>(c)
   );
 
-  auto h = std::get_if<cudaNode::Host>(&node->_handle);
+  auto h = std::get_if<cudaFlowNode::Host>(&node->_handle);
 
   cudaHostNodeParams p;
-  p.fn = cudaNode::Host::callback;
+  p.fn = cudaFlowNode::Host::callback;
   p.userData = h;
 
   TF_CHECK_CUDA(
     cudaGraphAddHostNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a host node"
   );
@@ -1274,11 +668,11 @@ cudaTask cudaFlow::host(C&& c) {
 // Function: kernel
 template <typename F, typename... ArgsT>
 cudaTask cudaFlow::kernel(
-  dim3 g, dim3 b, size_t s, F f, ArgsT&&... args
+  dim3 g, dim3 b, size_t s, F f, ArgsT... args
 ) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Kernel>{}, (void*)f
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Kernel>{}, (void*)f
   );
 
   cudaKernelNodeParams p;
@@ -1292,7 +686,7 @@ cudaTask cudaFlow::kernel(
 
   TF_CHECK_CUDA(
     cudaGraphAddKernelNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a kernel task"
   );
@@ -1306,15 +700,15 @@ template <typename T, std::enable_if_t<
 >
 cudaTask cudaFlow::zero(T* dst, size_t count) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Memset>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Memset>{}
   );
 
   auto p = cuda_get_zero_parms(dst, count);
 
   TF_CHECK_CUDA(
     cudaGraphAddMemsetNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a memset (zero) task"
   );
@@ -1328,15 +722,15 @@ template <typename T, std::enable_if_t<
 >
 cudaTask cudaFlow::fill(T* dst, T value, size_t count) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Memset>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Memset>{}
   );
 
   auto p = cuda_get_fill_parms(dst, value, count);
 
   TF_CHECK_CUDA(
     cudaGraphAddMemsetNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a memset (fill) task"
   );
@@ -1351,15 +745,15 @@ template <
 >
 cudaTask cudaFlow::copy(T* tgt, const T* src, size_t num) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Memcpy>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Memcpy>{}
   );
 
   auto p = cuda_get_copy_parms(tgt, src, num);
 
   TF_CHECK_CUDA(
     cudaGraphAddMemcpyNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a memcpy (copy) task"
   );
@@ -1370,15 +764,15 @@ cudaTask cudaFlow::copy(T* tgt, const T* src, size_t num) {
 // Function: memset
 inline cudaTask cudaFlow::memset(void* dst, int ch, size_t count) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Memset>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Memset>{}
   );
 
   auto p = cuda_get_memset_parms(dst, ch, count);
 
   TF_CHECK_CUDA(
     cudaGraphAddMemsetNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a memset task"
   );
@@ -1389,15 +783,15 @@ inline cudaTask cudaFlow::memset(void* dst, int ch, size_t count) {
 // Function: memcpy
 inline cudaTask cudaFlow::memcpy(void* tgt, const void* src, size_t bytes) {
 
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Memcpy>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Memcpy>{}
   );
 
   auto p = cuda_get_memcpy_parms(tgt, src, bytes);
 
   TF_CHECK_CUDA(
     cudaGraphAddMemcpyNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, &p
+      &node->_native_handle, _cfg._native_handle, nullptr, 0, &p
     ),
     "failed to create a memcpy task"
   );
@@ -1417,7 +811,7 @@ void cudaFlow::host(cudaTask task, C&& c) {
     TF_THROW(task, " is not a host task");
   }
 
-  auto h = std::get_if<cudaNode::Host>(&task._node->_handle);
+  auto h = std::get_if<cudaFlowNode::Host>(&task._node->_handle);
 
   h->func = std::forward<C>(c);
 }
@@ -1425,7 +819,7 @@ void cudaFlow::host(cudaTask task, C&& c) {
 // Function: update kernel parameters
 template <typename F, typename... ArgsT>
 void cudaFlow::kernel(
-  cudaTask task, dim3 g, dim3 b, size_t s, F f, ArgsT&&... args
+  cudaTask task, dim3 g, dim3 b, size_t s, F f, ArgsT... args
 ) {
 
   if(task.type() != cudaTaskType::KERNEL) {
@@ -1443,7 +837,7 @@ void cudaFlow::kernel(
   p.extra = nullptr;
 
   TF_CHECK_CUDA(
-    cudaGraphExecKernelNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecKernelNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update kernel parameters on ", task
   );
 }
@@ -1459,7 +853,7 @@ void cudaFlow::copy(cudaTask task, T* tgt, const T* src, size_t num) {
   auto p = cuda_get_copy_parms(tgt, src, num);
 
   TF_CHECK_CUDA(
-    cudaGraphExecMemcpyNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecMemcpyNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update memcpy parameters on ", task
   );
 }
@@ -1476,7 +870,7 @@ inline void cudaFlow::memcpy(
   auto p = cuda_get_memcpy_parms(tgt, src, bytes);
 
   TF_CHECK_CUDA(
-    cudaGraphExecMemcpyNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecMemcpyNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update memcpy parameters on ", task
   );
 }
@@ -1491,7 +885,7 @@ inline void cudaFlow::memset(cudaTask task, void* dst, int ch, size_t count) {
   auto p = cuda_get_memset_parms(dst, ch, count);
 
   TF_CHECK_CUDA(
-    cudaGraphExecMemsetNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecMemsetNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update memset parameters on ", task
   );
 }
@@ -1509,7 +903,7 @@ void cudaFlow::fill(cudaTask task, T* dst, T value, size_t count) {
   auto p = cuda_get_fill_parms(dst, value, count);
 
   TF_CHECK_CUDA(
-    cudaGraphExecMemsetNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecMemsetNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update memset parameters on ", task
   );
 }
@@ -1527,7 +921,7 @@ void cudaFlow::zero(cudaTask task, T* dst, size_t count) {
   auto p = cuda_get_zero_parms(dst, count);
 
   TF_CHECK_CUDA(
-    cudaGraphExecMemsetNodeSetParams(_exec, task._node->_native_handle, &p),
+    cudaGraphExecMemsetNodeSetParams(_exe, task._node->_native_handle, &p),
     "failed to update memset parameters on ", task
   );
 }
@@ -1542,23 +936,24 @@ void cudaFlow::capture(cudaTask task, C c) {
 
   // insert a subflow node
   // construct a captured flow from the callable
-  auto node_handle = std::get_if<cudaNode::Subflow>(&task._node->_handle);
-  node_handle->graph.clear();
+  auto node_handle = std::get_if<cudaFlowNode::Subflow>(&task._node->_handle);
+  //node_handle->graph.clear();
 
-  cudaFlowCapturer capturer(node_handle->graph);
-
+  cudaFlowCapturer capturer;
   c(capturer);
 
   // obtain the optimized captured graph
-  auto captured = capturer._capture();
-  //cuda_dump_graph(std::cout, captured);
+  capturer._cfg._native_handle.reset(capturer.capture());
+  node_handle->cfg = std::move(capturer._cfg);
 
   TF_CHECK_CUDA(
-    cudaGraphExecChildGraphNodeSetParams(_exec, task._node->_native_handle, captured),
+    cudaGraphExecChildGraphNodeSetParams(
+      _exe, 
+      task._node->_native_handle, 
+      node_handle->cfg._native_handle
+    ),
     "failed to update a captured child graph"
   );
-
-  TF_CHECK_CUDA(cudaGraphDestroy(captured), "failed to destroy captured graph");
 }
 
 // ----------------------------------------------------------------------------
@@ -1570,158 +965,59 @@ template <typename C>
 cudaTask cudaFlow::capture(C&& c) {
 
   // insert a subflow node
-  auto node = _graph.emplace_back(
-    _graph, std::in_place_type_t<cudaNode::Subflow>{}
+  auto node = _cfg.emplace_back(
+    _cfg, std::in_place_type_t<cudaFlowNode::Subflow>{}
   );
 
   // construct a captured flow from the callable
-  auto node_handle = std::get_if<cudaNode::Subflow>(&node->_handle);
-  node_handle->graph.clear();
-  cudaFlowCapturer capturer(node_handle->graph);
+  auto node_handle = std::get_if<cudaFlowNode::Subflow>(&node->_handle);
 
+  // perform capturing
+  cudaFlowCapturer capturer;
   c(capturer);
 
   // obtain the optimized captured graph
-  auto captured = capturer._capture();
-  //cuda_dump_graph(std::cout, captured);
+  capturer._cfg._native_handle.reset(capturer.capture());
+
+  // move capturer's cudaFlow graph into node
+  node_handle->cfg = std::move(capturer._cfg);
 
   TF_CHECK_CUDA(
     cudaGraphAddChildGraphNode(
-      &node->_native_handle, _graph._native_handle, nullptr, 0, captured
-    ),
+      &node->_native_handle, 
+      _cfg._native_handle, 
+      nullptr, 
+      0, 
+      node_handle->cfg._native_handle
+    ), 
     "failed to add a cudaFlow capturer task"
   );
-
-  TF_CHECK_CUDA(cudaGraphDestroy(captured), "failed to destroy captured graph");
 
   return cudaTask(node);
 }
 
 // ----------------------------------------------------------------------------
-// Offload methods
+// run method
 // ----------------------------------------------------------------------------
 
-// Procedure: offload_until
-template <typename P>
-void cudaFlow::offload_until(P&& predicate) {
-
-  _offload_until_external(std::forward<P>(predicate));
-  
-  /*
-  // turns out the optimized version runs slower...
-  switch(_handle.index()) {
-    case EXTERNAL: {
-      _offload_until_external(std::forward<P>(predicate));
-    }
-    break;
-    case INTERNAL: {
-      _offload_until_internal(std::forward<P>(predicate));
-    }
-    break;
-    default:
-    break;
-  }*/
-}
-
-template <typename P>
-void cudaFlow::_offload_until_external(P&& predicate) {
-  if(!_exec) {
-    _exec.instantiate(_graph._native_handle);
+// Procedure: run
+inline void cudaFlow::run(cudaStream_t stream) {
+  if(!_exe) {
+    _exe.instantiate(_cfg._native_handle);
   }
-  cudaStream stream;
-  while(!predicate()) {
-    _exec.launch(stream);
-    stream.synchronize();
-  }
-  _graph._state = cudaGraph::OFFLOADED;
+  _exe.launch(stream);
+  _cfg._state = cudaFlowGraph::OFFLOADED;
 }
 
-template <typename P>
-void cudaFlow::_offload_until_internal(P&& predicate) {
-  
-  auto& executor = std::get<Internal>(_handle).executor;
-
-  if(!_exec) {
-    _exec.instantiate(_graph._native_handle);
-  }
-  
-  cudaStream stream;
-  cudaEvent event(cudaEventDisableTiming);
-
-  while(!predicate()) {
-    _exec.launch(stream);
-    stream.record(event);
-    executor.loop_until([&event] () -> bool { 
-      return cudaEventQuery(event) == cudaSuccess;
-    });
-  }
-
-  _graph._state = cudaGraph::OFFLOADED;
+// Function: native_cfg
+inline cudaGraph_t cudaFlow::native_graph() {
+  return _cfg._native_handle;
 }
 
-// Procedure: offload_n
-inline void cudaFlow::offload_n(size_t n) {
-  offload_until([repeat=n] () mutable { return repeat-- == 0; });
+// Function: native_executable
+inline cudaGraphExec_t cudaFlow::native_executable() {
+  return _exe;
 }
-
-// Procedure: offload
-inline void cudaFlow::offload() {
-  offload_until([repeat=1] () mutable { return repeat-- == 0; });
-}
-
-// ############################################################################
-// Forward declaration: FlowBuilder
-// ############################################################################
-
-// FlowBuilder::emplace_on
-template <typename C, typename D,
-  std::enable_if_t<is_cudaflow_task_v<C>, void>*
->
-Task FlowBuilder::emplace_on(C&& c, D&& d) {
-  auto n = _graph._emplace_back(
-    std::in_place_type_t<Node::cudaFlow>{},
-    [c=std::forward<C>(c), d=std::forward<D>(d)] (Executor& e, Node* p) mutable {
-      cudaScopedDevice ctx(d);
-      e._invoke_cudaflow_task_entry(p, c);
-    },
-    std::make_unique<cudaGraph>()
-  );
-  return Task(n);
-}
-
-// FlowBuilder::emplace
-template <typename C, std::enable_if_t<is_cudaflow_task_v<C>, void>*>
-Task FlowBuilder::emplace(C&& c) {
-  return emplace_on(std::forward<C>(c), tf::cuda_get_device());
-}
-
-// ############################################################################
-// Forward declaration: Executor
-// ############################################################################
-
-// Procedure: _invoke_cudaflow_task_entry
-template <typename C, std::enable_if_t<is_cudaflow_task_v<C>, void>*>
-void Executor::_invoke_cudaflow_task_entry(Node* node, C&& c) {
-
-  using T = std::conditional_t<
-    std::is_invocable_r_v<void, C, cudaFlow&>, cudaFlow, cudaFlowCapturer
-  >;
-
-  auto h = std::get_if<Node::cudaFlow>(&node->_handle);
-
-  cudaGraph* g = dynamic_cast<cudaGraph*>(h->graph.get());
-
-  g->clear();
-
-  T cf(*g, *this);
-
-  c(cf);
-
-  if(!(g->_state & cudaGraph::OFFLOADED)) {
-    cf.offload();
-  }
-}
-
 
 }  // end of namespace tf -----------------------------------------------------
 
