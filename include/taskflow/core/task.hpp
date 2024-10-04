@@ -21,22 +21,16 @@ namespace tf {
 enum class TaskType : int {
   /** @brief placeholder task type */
   PLACEHOLDER = 0,
-  /** @brief cudaFlow task type */
-  CUDAFLOW,
-  /** @brief syclFlow task type */
-  SYCLFLOW,
   /** @brief static task type */
   STATIC,
   /** @brief dynamic (subflow) task type */
-  DYNAMIC,
+  SUBFLOW,
   /** @brief condition task type */
   CONDITION,
   /** @brief module task type */
   MODULE,
   /** @brief asynchronous task type */
   ASYNC,
-  /** @brief runtime task type */
-  RUNTIME,
   /** @brief undefined task type (for internal use only) */
   UNDEFINED
 };
@@ -45,16 +39,13 @@ enum class TaskType : int {
 @private
 @brief array of all task types (used for iterating task types)
 */
-inline constexpr std::array<TaskType, 9> TASK_TYPES = {
+inline constexpr std::array<TaskType, 6> TASK_TYPES = {
   TaskType::PLACEHOLDER,
-  TaskType::CUDAFLOW,
-  TaskType::SYCLFLOW,
   TaskType::STATIC,
-  TaskType::DYNAMIC,
+  TaskType::SUBFLOW,
   TaskType::CONDITION,
   TaskType::MODULE,
   TaskType::ASYNC,
-  TaskType::RUNTIME
 };
 
 /**
@@ -64,14 +55,11 @@ The name of each task type is the litte-case string of its characters.
 
 @code{.cpp}
 TaskType::PLACEHOLDER     ->  "placeholder"
-TaskType::CUDAFLOW        ->  "cudaflow"
-TaskType::SYCLFLOW        ->  "syclflow"
 TaskType::STATIC          ->  "static"
-TaskType::DYNAMIC         ->  "subflow"
+TaskType::SUBFLOW         ->  "subflow"
 TaskType::CONDITION       ->  "condition"
 TaskType::MODULE          ->  "module"
 TaskType::ASYNC           ->  "async"
-TaskType::RUNTIME         ->  "runtime"
 @endcode
 */
 inline const char* to_string(TaskType type) {
@@ -80,14 +68,11 @@ inline const char* to_string(TaskType type) {
 
   switch(type) {
     case TaskType::PLACEHOLDER:      val = "placeholder";     break;
-    case TaskType::CUDAFLOW:         val = "cudaflow";        break;
-    case TaskType::SYCLFLOW:         val = "syclflow";        break;
     case TaskType::STATIC:           val = "static";          break;
-    case TaskType::DYNAMIC:          val = "subflow";         break;
+    case TaskType::SUBFLOW:          val = "subflow";         break;
     case TaskType::CONDITION:        val = "condition";       break;
     case TaskType::MODULE:           val = "module";          break;
     case TaskType::ASYNC:            val = "async";           break;
-    case TaskType::RUNTIME:          val = "runtime";         break;
     default:                         val = "undefined";       break;
   }
 
@@ -99,69 +84,51 @@ inline const char* to_string(TaskType type) {
 // ----------------------------------------------------------------------------
 
 /**
-@brief determines if a callable is a static task
-
-A static task is a callable object constructible from std::function<void()>.
-*/
-template <typename C>
-constexpr bool is_static_task_v =
-  std::is_invocable_r_v<void, C> &&
-  !std::is_invocable_r_v<int, C> &&
-  !std::is_invocable_r_v<tf::SmallVector<int>, C>;
-
-/**
 @brief determines if a callable is a dynamic task
 
 A dynamic task is a callable object constructible from std::function<void(Subflow&)>.
 */
 template <typename C>
-constexpr bool is_dynamic_task_v = std::is_invocable_r_v<void, C, Subflow&>;
+constexpr bool is_subflow_task_v = 
+  std::is_invocable_r_v<void, C, Subflow&> &&
+  !std::is_invocable_r_v<void, C, Runtime&>;
 
 /**
 @brief determines if a callable is a condition task
 
-A condition task is a callable object constructible from std::function<int()>.
+A condition task is a callable object constructible from std::function<int()>
+or std::function<int(tf::Runtime&)>.
 */
 template <typename C>
-constexpr bool is_condition_task_v = std::is_invocable_r_v<int, C>;
+constexpr bool is_condition_task_v = 
+  (std::is_invocable_r_v<int, C> || std::is_invocable_r_v<int, C, Runtime&>) &&
+  !is_subflow_task_v<C>;
 
 /**
 @brief determines if a callable is a multi-condition task
 
 A multi-condition task is a callable object constructible from
-std::function<tf::SmallVector<int>()>.
+std::function<tf::SmallVector<int>()> or
+std::function<tf::SmallVector<int>(tf::Runtime&)>.
 */
 template <typename C>
 constexpr bool is_multi_condition_task_v =
-  std::is_invocable_r_v<SmallVector<int>, C>;
+  (std::is_invocable_r_v<SmallVector<int>, C> ||
+  std::is_invocable_r_v<SmallVector<int>, C, Runtime&>) &&
+  !is_subflow_task_v<C>;
 
 /**
-@brief determines if a callable is a %cudaFlow task
+@brief determines if a callable is a static task
 
-A cudaFlow task is a callable object constructible from
-std::function<void(tf::cudaFlow&)> or std::function<void(tf::cudaFlowCapturer&)>.
+A static task is a callable object constructible from std::function<void()>
+or std::function<void(tf::Runtime&)>.
 */
 template <typename C>
-constexpr bool is_cudaflow_task_v = std::is_invocable_r_v<void, C, cudaFlow&> ||
-                                    std::is_invocable_r_v<void, C, cudaFlowCapturer&>;
-
-/**
-@brief determines if a callable is a %syclFlow task
-
-A syclFlow task is a callable object constructible from
-std::function<void(tf::syclFlow&)>.
-*/
-template <typename C>
-constexpr bool is_syclflow_task_v = std::is_invocable_r_v<void, C, syclFlow&>;
-
-/**
-@brief determines if a callable is a runtime task
-
-A runtime task is a callable object constructible from
-std::function<void(tf::Runtime&)>.
-*/
-template <typename C>
-constexpr bool is_runtime_task_v = std::is_invocable_r_v<void, C, Runtime&>;
+constexpr bool is_static_task_v =
+  (std::is_invocable_r_v<void, C> || std::is_invocable_r_v<void, C, Runtime&>) &&
+  !is_condition_task_v<C> &&
+  !is_multi_condition_task_v<C> &&
+  !is_subflow_task_v<C>;
 
 // ----------------------------------------------------------------------------
 // Task
@@ -258,8 +225,7 @@ class Task {
 
     @tparam C callable type
 
-    @param callable callable to construct one of the static, dynamic, condition,
-           and cudaFlow tasks
+    @param callable callable to construct a task
 
     @return @c *this
     */
@@ -302,16 +268,6 @@ class Task {
     Task& succeed(Ts&&... tasks);
 
     /**
-    @brief makes the task release this semaphore
-    */
-    Task& release(Semaphore& semaphore);
-
-    /**
-    @brief makes the task acquire this semaphore
-    */
-    Task& acquire(Semaphore& semaphore);
-
-    /**
     @brief assigns pointer to user data
 
     @param data pointer to user data
@@ -341,23 +297,7 @@ class Task {
     @return @c *this
     */
     Task& data(void* data);
-      
-    /**
-    @brief assigns a priority value to the task
-
-    A priority value can be one of the following three levels, 
-    tf::TaskPriority::HIGH (numerically equivalent to 0),
-    tf::TaskPriority::NORMAL (numerically equivalent to 1), and
-    tf::TaskPriority::LOW (numerically equivalent to 2).
-    The smaller the priority value, the higher the priority.
-    */
-    Task& priority(TaskPriority p);
     
-    /**
-    @brief queries the priority value of the task
-    */
-    TaskPriority priority() const;
-
     /**
     @brief resets the task handle to null
     */
@@ -477,25 +417,6 @@ inline Task& Task::name(const std::string& name) {
   return *this;
 }
 
-// Function: acquire
-inline Task& Task::acquire(Semaphore& s) {
-  if(!_node->_semaphores) {
-    _node->_semaphores = std::make_unique<Node::Semaphores>();
-  }
-  _node->_semaphores->to_acquire.push_back(&s);
-  return *this;
-}
-
-// Function: release
-inline Task& Task::release(Semaphore& s) {
-  if(!_node->_semaphores) {
-    //_node->_semaphores.emplace();
-    _node->_semaphores = std::make_unique<Node::Semaphores>();
-  }
-  _node->_semaphores->to_release.push_back(&s);
-  return *this;
-}
-
 // Procedure: reset
 inline void Task::reset() {
   _node = nullptr;
@@ -546,15 +467,12 @@ inline TaskType Task::type() const {
   switch(_node->_handle.index()) {
     case Node::PLACEHOLDER:     return TaskType::PLACEHOLDER;
     case Node::STATIC:          return TaskType::STATIC;
-    case Node::DYNAMIC:         return TaskType::DYNAMIC;
+    case Node::SUBFLOW:         return TaskType::SUBFLOW;
     case Node::CONDITION:       return TaskType::CONDITION;
     case Node::MULTI_CONDITION: return TaskType::CONDITION;
     case Node::MODULE:          return TaskType::MODULE;
     case Node::ASYNC:           return TaskType::ASYNC;
-    case Node::SILENT_ASYNC:    return TaskType::ASYNC;
-    case Node::CUDAFLOW:        return TaskType::CUDAFLOW;
-    case Node::SYCLFLOW:        return TaskType::SYCLFLOW;
-    case Node::RUNTIME:         return TaskType::RUNTIME;
+    case Node::DEPENDENT_ASYNC: return TaskType::ASYNC;
     default:                    return TaskType::UNDEFINED;
   }
 }
@@ -595,20 +513,14 @@ Task& Task::work(C&& c) {
   if constexpr(is_static_task_v<C>) {
     _node->_handle.emplace<Node::Static>(std::forward<C>(c));
   }
-  else if constexpr(is_dynamic_task_v<C>) {
-    _node->_handle.emplace<Node::Dynamic>(std::forward<C>(c));
+  else if constexpr(is_subflow_task_v<C>) {
+    _node->_handle.emplace<Node::Subflow>(std::forward<C>(c));
   }
   else if constexpr(is_condition_task_v<C>) {
     _node->_handle.emplace<Node::Condition>(std::forward<C>(c));
   }
   else if constexpr(is_multi_condition_task_v<C>) {
     _node->_handle.emplace<Node::MultiCondition>(std::forward<C>(c));
-  }
-  else if constexpr(is_cudaflow_task_v<C>) {
-    _node->_handle.emplace<Node::cudaFlow>(std::forward<C>(c));
-  }
-  else if constexpr(is_runtime_task_v<C>) {
-    _node->_handle.emplace<Node::Runtime>(std::forward<C>(c));
   }
   else {
     static_assert(dependent_false_v<C>, "invalid task callable");
@@ -627,29 +539,20 @@ inline Task& Task::data(void* data) {
   return *this;
 }
 
-// Function: priority
-inline Task& Task::priority(TaskPriority p) {
-  _node->_priority = static_cast<unsigned>(p);
-  return *this;
-}
-
-// Function: priority
-inline TaskPriority Task::priority() const {
-  return static_cast<TaskPriority>(_node->_priority);
-}
-
 // ----------------------------------------------------------------------------
 // global ostream
 // ----------------------------------------------------------------------------
 
 /**
-@brief overload of ostream inserter operator for cudaTask
+@brief overload of ostream inserter operator for Task
 */
 inline std::ostream& operator << (std::ostream& os, const Task& task) {
   task.dump(os);
   return os;
 }
 
+// ----------------------------------------------------------------------------
+// Task View
 // ----------------------------------------------------------------------------
 
 /**
@@ -752,15 +655,12 @@ inline TaskType TaskView::type() const {
   switch(_node._handle.index()) {
     case Node::PLACEHOLDER:     return TaskType::PLACEHOLDER;
     case Node::STATIC:          return TaskType::STATIC;
-    case Node::DYNAMIC:         return TaskType::DYNAMIC;
+    case Node::SUBFLOW:         return TaskType::SUBFLOW;
     case Node::CONDITION:       return TaskType::CONDITION;
     case Node::MULTI_CONDITION: return TaskType::CONDITION;
     case Node::MODULE:          return TaskType::MODULE;
     case Node::ASYNC:           return TaskType::ASYNC;
-    case Node::SILENT_ASYNC:    return TaskType::ASYNC;
-    case Node::CUDAFLOW:        return TaskType::CUDAFLOW;
-    case Node::SYCLFLOW:        return TaskType::SYCLFLOW;
-    case Node::RUNTIME:         return TaskType::RUNTIME;
+    case Node::DEPENDENT_ASYNC: return TaskType::ASYNC;
     default:                    return TaskType::UNDEFINED;
   }
 }
@@ -774,7 +674,7 @@ inline size_t TaskView::hash_value() const {
 template <typename V>
 void TaskView::for_each_successor(V&& visitor) const {
   for(size_t i=0; i<_node._successors.size(); ++i) {
-    visitor(TaskView(_node._successors[i]));
+    visitor(TaskView(*_node._successors[i]));
   }
 }
 
@@ -782,11 +682,11 @@ void TaskView::for_each_successor(V&& visitor) const {
 template <typename V>
 void TaskView::for_each_dependent(V&& visitor) const {
   for(size_t i=0; i<_node._dependents.size(); ++i) {
-    visitor(TaskView(_node._dependents[i]));
+    visitor(TaskView(*_node._dependents[i]));
   }
 }
 
-}  // end of namespace tf. ---------------------------------------------------
+}  // end of namespace tf. ----------------------------------------------------
 
 namespace std {
 

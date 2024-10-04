@@ -77,7 +77,7 @@ RandItr median_of_three(RandItr l, RandItr m, RandItr r, C cmp) {
 }
 
 /**
-@brief finds the pseudo median of a range of items using spreaded
+@brief finds the pseudo median of a range of items using a spread of
        nine numbers
  */
 template <typename RandItr, typename C>
@@ -119,6 +119,30 @@ template <typename T, std::enable_if_t<std::is_integral_v<T>, void>* = nullptr>
 T unique_id() {
   static std::atomic<T> counter{0};
   return counter.fetch_add(1, std::memory_order_relaxed);
+}
+
+/**
+@brief updates an atomic variable with a maximum value
+*/
+template <typename T>
+inline void atomic_max(std::atomic<T>& v, const T& max_v) noexcept {
+  T prev = v.load(std::memory_order_relaxed);
+  while(prev < max_v && 
+        !v.compare_exchange_weak(prev, max_v, std::memory_order_relaxed,
+                                              std::memory_order_relaxed)) {
+  }
+}
+
+/**
+@brief updates an atomic variable with a minimum value
+*/
+template <typename T>
+inline void atomic_min(std::atomic<T>& v, const T& min_v) noexcept {
+  T prev = v.load(std::memory_order_relaxed);
+  while(prev > min_v && 
+        !v.compare_exchange_weak(prev, min_v, std::memory_order_relaxed,
+                                              std::memory_order_relaxed)) {
+  }
 }
 
 }  // end of namespace tf -----------------------------------------------------

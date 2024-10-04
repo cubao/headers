@@ -15,7 +15,7 @@ A CUDA device object has a lifetime associated with a device,
 for example, @c cudaStream_t, @c cublasHandle_t, etc.
 Creating a device object is typically expensive (e.g., 10-200 ms)
 and destroying it may trigger implicit device synchronization.
-For applications tha intensively make use of device objects,
+For applications that intensively make use of device objects,
 it is desirable to reuse them as much as possible.
 
 There exists an one-to-one relationship between CUDA devices in CUDA Runtime API
@@ -175,6 +175,111 @@ template <typename H, typename C, typename D>
 size_t cudaPerThreadDeviceObjectPool<H, C, D>::footprint_size() const {
   return _footprint.size();
 }
+
+// ----------------------------------------------------------------------------
+// cudaObject
+// ----------------------------------------------------------------------------
+
+/**
+@class cudaObject
+
+@brief class to create an RAII-styled and move-only wrapper for CUDA objects
+*/
+template <typename T, typename C, typename D>
+class cudaObject {
+  
+  public:
+
+  /**
+  @brief constructs a CUDA object from the given one
+  */
+  explicit cudaObject(T obj) : object(obj) {}
+  
+  /**
+  @brief constructs a new CUDA object
+  */
+  cudaObject() : object{ C{}() } {}
+    
+  /**
+  @brief disabled copy constructor
+  */
+  cudaObject(const cudaObject&) = delete;
+  
+  /**
+  @brief move constructor
+  */
+  cudaObject(cudaObject&& rhs) : object{rhs.object} {
+    rhs.object = nullptr;
+  }
+
+  /**
+  @brief destructs the CUDA object
+  */
+  ~cudaObject() { D{}(object); }
+  
+  /**
+  @brief disabled copy assignment
+  */
+  cudaObject& operator = (const cudaObject&) = delete;
+
+  /**
+  @brief move assignment
+  */
+  cudaObject& operator = (cudaObject&& rhs) {
+    D {} (object);
+    object = rhs.object;
+    rhs.object = nullptr;
+    return *this;
+  }
+  
+  /**
+  @brief implicit conversion to the native CUDA stream (cudaObject_t)
+
+  Returns the underlying stream of type @c cudaObject_t.
+  */
+  operator T () const {
+    return object;
+  }
+    
+  /**
+  @brief deletes the current CUDA object (if any) and creates a new one
+  */
+  void create() {
+    D {} (object);
+    object = C{}();
+  }
+  
+  /**
+  @brief resets this CUDA object to the given one
+  */
+  void reset(T new_obj) {
+    D {} (object);
+    object = new_obj;
+  }
+  
+  /**
+  @brief deletes the current CUDA object
+  */
+  void clear() {
+    reset(nullptr);
+  }
+
+  /**
+  @brief releases the ownership of the CUDA object
+  */
+  T release() {
+    auto tmp = object;
+    object = nullptr;
+    return tmp;
+  }
+  
+  protected:
+
+  /**
+  @brief the CUDA object
+  */
+  T object;
+};
 
 }  // end of namespace tf -----------------------------------------------------
 
