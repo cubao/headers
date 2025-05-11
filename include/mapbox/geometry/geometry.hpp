@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <mapbox/geometry/empty.hpp>
 #include <mapbox/geometry/point.hpp>
 #include <mapbox/geometry/line_string.hpp>
