@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -19,7 +19,7 @@
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/json_decoder.hpp>
 #include <jsoncons/json_parser.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/semantic_tag.hpp>
 #include <jsoncons/utility/unicode_traits.hpp>
 
@@ -128,7 +128,7 @@ namespace detail {
         std::size_t line_{1};
         std::size_t column_{1};
         const char_type* begin_input_{nullptr};
-        const char_type* end_input_{nullptr};
+        const char_type* input_end_{nullptr};
         const char_type* p_{nullptr};
 
         using argument_type = std::vector<pointer>;
@@ -182,7 +182,7 @@ namespace detail {
             uint32_t cp2 = 0;
 
             begin_input_ = path.data();
-            end_input_ = path.data() + path.length();
+            input_end_ = path.data() + path.length();
             p_ = begin_input_;
 
             slice slic;
@@ -190,7 +190,7 @@ namespace detail {
             int ancestor_depth = 0;
 
             state_stack_.emplace_back(path_state::start);
-            while (p_ < end_input_ && !state_stack_.empty())
+            while (p_ < input_end_ && !state_stack_.empty())
             {
                 switch (state_stack_.back())
                 {
@@ -432,7 +432,7 @@ namespace detail {
                             {
                                 json_decoder<Json> decoder(alloc_);
                                 basic_json_parser<char_type> parser;
-                                parser.update(p_,end_input_ - p_);
+                                parser.update(p_,input_end_ - p_);
                                 parser.parse_some(decoder, ec);
                                 if (JSONCONS_UNLIKELY(ec))
                                 {
@@ -495,7 +495,7 @@ namespace detail {
                                 buffer.push_back(*p_);
                                 ++p_;
                                 ++column_;
-                                if (p_ == end_input_)
+                                if (p_ == input_end_)
                                 {
                                     ec = jsonpath_errc::unexpected_eof;
                                     return path_expression_type(alloc_);
@@ -1426,7 +1426,7 @@ namespace detail {
                                     return path_expression_type(alloc_);
                                 }
                                 int64_t n{0};
-                                auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                 if (!r)
                                 {
                                     ec = jsonpath_errc::invalid_number;
@@ -1451,7 +1451,7 @@ namespace detail {
                                 }
 
                                 int64_t n{0};
-                                auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                 if (!r)
                                 {
                                     ec = jsonpath_errc::invalid_number;
@@ -1476,7 +1476,7 @@ namespace detail {
                                 if (!buffer.empty())
                                 {
                                     int64_t n{0};
-                                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                     if (!r)
                                     {
                                         ec = jsonpath_errc::invalid_number;
@@ -1504,7 +1504,7 @@ namespace detail {
                         if (!buffer.empty())
                         {
                             int64_t n{0};
-                            auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                            auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                             if (!r)
                             {
                                 ec = jsonpath_errc::invalid_number;
@@ -1542,7 +1542,7 @@ namespace detail {
                         if (!buffer.empty())
                         {
                             int64_t n{0};
-                            auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                            auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                             if (!r)
                             {
                                 ec = jsonpath_errc::invalid_number;
@@ -1728,7 +1728,7 @@ namespace detail {
                                 }
                                 
                                 int64_t n{0};
-                                auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                 if (!r)
                                 {
                                     ec = jsonpath_errc::invalid_number;
@@ -1747,7 +1747,7 @@ namespace detail {
                                 if (!buffer.empty())
                                 {
                                     int64_t n{0};
-                                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                     if (!r)
                                     {
                                         ec = jsonpath_errc::invalid_number;
@@ -2120,7 +2120,7 @@ namespace detail {
                     ++column_;
                     break;
                 case '\r':
-                    if (p_+1 < end_input_ && *(p_+1) == '\n')
+                    if (p_+1 < input_end_ && *(p_+1) == '\n')
                     {
                         ++p_;
                     }

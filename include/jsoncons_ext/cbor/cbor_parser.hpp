@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -21,7 +21,7 @@
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/source.hpp>
 #include <jsoncons/utility/binary.hpp>
 #include <jsoncons/utility/unicode_traits.hpp>
@@ -136,7 +136,7 @@ class basic_cbor_parser : public ser_context
     std::bitset<num_of_tags> other_tags_;
     allocator_type alloc_;
     Source source_;
-    cbor_decode_options options_;
+    int max_nesting_depth_;
     string_type text_buffer_;
     byte_string_type bytes_buffer_;
     std::vector<parse_state,parse_state_allocator_type> state_stack_;
@@ -186,7 +186,7 @@ public:
                       const Allocator& alloc = Allocator())
        : alloc_(alloc),
          source_(std::forward<Sourceable>(source)),
-         options_(options),
+         max_nesting_depth_(options.max_nesting_depth()),
          text_buffer_(alloc),
          bytes_buffer_(alloc),
          state_stack_(alloc),
@@ -657,7 +657,7 @@ private:
 
     void begin_array(item_event_visitor& visitor, uint8_t info, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = cbor_errc::max_nesting_depth_exceeded;
             more_ = false;
@@ -715,7 +715,7 @@ private:
 
     void begin_object(item_event_visitor& visitor, uint8_t info, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = cbor_errc::max_nesting_depth_exceeded;
             more_ = false;
@@ -1221,7 +1221,7 @@ private:
                 {
                     return;
                 }
-                jsoncons::detail::from_integer(val, str);
+                jsoncons::from_integer(val, str);
                 break;
             }
             case jsoncons::cbor::detail::cbor_major_type::negative_integer:
@@ -1231,7 +1231,7 @@ private:
                 {
                     return;
                 }
-                jsoncons::detail::from_integer(val, str);
+                jsoncons::from_integer(val, str);
                 break;
             }
             case jsoncons::cbor::detail::cbor_major_type::semantic_tag:
@@ -1296,11 +1296,11 @@ private:
             if (str[0] == '-')
             {
                 result.push_back('-');
-                jsoncons::detail::prettify_string(str.c_str()+1, str.size()-1, (int)exponent, -4, 17, result);
+                jsoncons::prettify_string(str.c_str()+1, str.size()-1, (int)exponent, -4, 17, result);
             }
             else
             {
-                jsoncons::detail::prettify_string(str.c_str(), str.size(), (int)exponent, -4, 17, result);
+                jsoncons::prettify_string(str.c_str(), str.size(), (int)exponent, -4, 17, result);
             }
         }
         else
@@ -1379,7 +1379,7 @@ private:
                 }
                 str.push_back('0');
                 str.push_back('x');
-                jsoncons::detail::integer_to_hex(val, str);
+                jsoncons::integer_to_hex(val, str);
                 break;
             }
             case jsoncons::cbor::detail::cbor_major_type::negative_integer:
@@ -1392,7 +1392,7 @@ private:
                 str.push_back('-');
                 str.push_back('0');
                 str.push_back('x');
-                jsoncons::detail::integer_to_hex(static_cast<uint64_t>(-val), str);
+                jsoncons::integer_to_hex(static_cast<uint64_t>(-val), str);
                 break;
             }
             case jsoncons::cbor::detail::cbor_major_type::semantic_tag:
@@ -1453,12 +1453,12 @@ private:
         str.push_back('p');
         if (exponent >=0)
         {
-            jsoncons::detail::integer_to_hex(static_cast<uint64_t>(exponent), str);
+            jsoncons::integer_to_hex(static_cast<uint64_t>(exponent), str);
         }
         else
         {
             str.push_back('-');
-            jsoncons::detail::integer_to_hex(static_cast<uint64_t>(-exponent), str);
+            jsoncons::integer_to_hex(static_cast<uint64_t>(-exponent), str);
         }
     }
 

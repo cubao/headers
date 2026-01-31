@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -17,12 +17,12 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/sink.hpp>
 #include <jsoncons/utility/binary.hpp>
 #include <jsoncons/utility/unicode_traits.hpp>
@@ -83,7 +83,7 @@ private:
     };
 
     Sink sink_;
-    const ubjson_encode_options options_;
+    int max_nesting_depth_;
     allocator_type alloc_;
 
     std::vector<stack_item> stack_;
@@ -104,7 +104,7 @@ public:
                                   const ubjson_encode_options& options, 
                                   const Allocator& alloc = Allocator())
        : sink_(std::forward<Sink>(sink)),
-         options_(options),
+         max_nesting_depth_(options.max_nesting_depth()),
          alloc_(alloc)
     {
     }
@@ -145,7 +145,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_object(semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = ubjson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;
@@ -158,7 +158,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_object(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = ubjson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;
@@ -200,7 +200,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_array(semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = ubjson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;
@@ -213,7 +213,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_array(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = ubjson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -13,6 +13,7 @@
 #include <utility> // std::swap
 
 #include <jsoncons/config/compiler_support.hpp>
+#include <jsoncons/detail/utility.hpp>
 
 namespace jsoncons 
 { 
@@ -153,6 +154,13 @@ namespace detail
         {
         }
 
+        template<typename... Args, 
+            typename = typename std::enable_if<std::is_constructible<T, Args...>::value,int>::type>
+        optional(jsoncons::detail::in_place_t, Args&&... args) 
+          : has_value_(true), value_(std::forward<Args>(args)...)
+        {
+        }
+
         ~optional() noexcept
         {
             destroy();
@@ -171,7 +179,7 @@ namespace detail
             return *this;
         }
 
-        optional& operator=(optional&& other )
+        optional& operator=(optional&& other ) noexcept
         {
             if (other)
             {

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -8,7 +8,6 @@
 #define JSONCONS_EXT_JSONSCHEMA_DRAFT7_SCHEMA_VALIDATOR_FACTORY_7_HPP
 
 #include <cassert>
-#include <iostream>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -141,7 +140,7 @@ namespace draft7 {
 
             switch (sch.type())
             {
-                case json_type::bool_value:
+                case json_type::boolean:
                 {
                     schema_validator_ptr = this->make_boolean_schema(new_context, sch);
                     schema_validator<Json>* p = schema_validator_ptr.get();
@@ -151,7 +150,7 @@ namespace draft7 {
                     }          
                     break;
                 }
-                case json_type::object_value:
+                case json_type::object:
                 {
                     auto it = sch.find("$ref");
                     if (it != sch.object_range().end()) // this schema is a reference
@@ -169,7 +168,7 @@ namespace draft7 {
                             }
                         }
 
-                        Json default_value{ jsoncons::null_type() };
+                        jsoncons::optional<Json> default_value;
                         uri relative((*it).value().template as<std::string>()); 
                         auto id = context.get_base_uri().resolve(relative);
                         validators.push_back(this->get_or_create_reference(sch, uri_wrapper{id}));
@@ -207,7 +206,7 @@ namespace draft7 {
             const Json& sch, anchor_uri_map_type& anchor_dict)
         {
             jsoncons::optional<jsoncons::uri> id = context.id();
-            Json default_value{ jsoncons::null_type() };
+            jsoncons::optional<Json> default_value;
             std::vector<keyword_validator_ptr_type> validators;
             std::map<std::string,schema_validator_ptr_type> defs;
 
@@ -311,12 +310,12 @@ namespace draft7 {
             if (it != sch.object_range().end()) 
             {
 
-                if ((*it).value().type() == json_type::array_value) 
+                if ((*it).value().type() == json_type::array) 
                 {
                     validators.emplace_back(factory_.make_prefix_items_validator_07(context, (*it).value(), sch, anchor_dict));
                 } 
-                else if ((*it).value().type() == json_type::object_value ||
-                           (*it).value().type() == json_type::bool_value)
+                else if ((*it).value().type() == json_type::object ||
+                           (*it).value().type() == json_type::boolean)
                 {
                     validators.emplace_back(factory_.make_items_validator("items", context, (*it).value(), sch, anchor_dict));
                 }

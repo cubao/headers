@@ -1,4 +1,4 @@
-/// Copyright 2013-2025 Daniel Parker
+/// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -47,7 +47,8 @@ namespace jsoncons {
         illegal_codepoint,
         illegal_surrogate_value,
         unpaired_high_surrogate,
-        illegal_unicode_character
+        illegal_unicode_character,
+        unexpected_character
     };
 
     class json_error_category_impl
@@ -122,6 +123,8 @@ namespace jsoncons {
                     return "Expected low surrogate following the high surrogate";
                 case json_errc::illegal_unicode_character:
                     return "Illegal unicode character";
+                case json_errc::unexpected_character:
+                    return "Unexpected character";
                 default:
                     return "Unknown JSON parser error";
                 }

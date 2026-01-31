@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -47,25 +47,41 @@ namespace jsoncons {
             JSONCONS_STR( 0 ))); }
 #endif // _DEBUG
 
-#if defined(JSONCONS_HAS_2017)
-#  define JSONCONS_FALLTHROUGH [[fallthrough]]
-#elif defined(__clang__)
-#  define JSONCONS_FALLTHROUGH [[clang::fallthrough]]
-#elif defined(__GNUC__) && ((__GNUC__ >= 7))
-#  define JSONCONS_FALLTHROUGH __attribute__((fallthrough))
-#elif defined (__GNUC__)
-#  define JSONCONS_FALLTHROUGH // FALLTHRU
+#include <jsoncons/detail/utility.hpp>
+namespace jsoncons {
+using jsoncons::detail::in_place_t;
+JSONCONS_INLINE_CONSTEXPR in_place_t in_place{};
+} // namespace jsoncons
+
+#if !defined(JSONCONS_HAS_STD_EXPECTED)
+  #include <jsoncons/detail/expected.hpp>
+  namespace jsoncons {
+  using jsoncons::detail::expected;
+  using jsoncons::detail::unexpect_t;
+  using jsoncons::detail::unexpect;
+  } // namespace jsoncons
 #else
-#  define JSONCONS_FALLTHROUGH
+  #include <expected>
+  namespace jsoncons {
+  template <typename R,typename E>
+  using expected = std::expected<R,E>;
+  using unexpect_t = std::unexpect_t;
+  JSONCONS_INLINE_CONSTEXPR unexpect_t unexpect{};
+  } // namespace jsoncons
 #endif
         
+#include <jsoncons/detail/make_obj_using_allocator.hpp>
+namespace jsoncons {
+using jsoncons::detail::make_obj_using_allocator;
+} // namespace jsoncons
+
 #if !defined(JSONCONS_HAS_STD_STRING_VIEW)
 #include <jsoncons/detail/string_view.hpp>
 namespace jsoncons {
 using jsoncons::detail::basic_string_view;
 using string_view = jsoncons::detail::string_view;
 using wstring_view = jsoncons::detail::wstring_view;
-}
+} // namespace jsoncons
 #else 
 #include <string_view>
 namespace jsoncons {
@@ -217,15 +233,31 @@ namespace jsoncons {
         return jsoncons::wstring_view(w);
     }
 
+    // From boost 1_71
+    template <typename T,typename U>
+    T launder_cast(U* u)
+    {
+    #if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
+        return std::launder(reinterpret_cast<T>(u));
+    #elif defined(__GNUC__) &&  (__GNUC__ * 100 + __GNUC_MINOR__) > 800
+        return __builtin_launder(reinterpret_cast<T>(u));
+    #else
+        return reinterpret_cast<T>(u);
+    #endif
+    }
+
 } // namespace jsoncons
 
-#define JSONCONS_EXPAND(X) X    
-#define JSONCONS_QUOTE(Prefix, A) JSONCONS_EXPAND(Prefix ## #A)
-#define JSONCONS_WIDEN(A) JSONCONS_EXPAND(L ## A)
+// Preprocessor macros
 
-#define JSONCONS_CSTRING_CONSTANT(CharT, Str) cstring_constant_of_type<CharT>(Str, JSONCONS_WIDEN(Str))
-#define JSONCONS_STRING_CONSTANT(CharT, Str) string_constant_of_type<CharT>(Str, JSONCONS_WIDEN(Str))
-#define JSONCONS_STRING_VIEW_CONSTANT(CharT, Str) string_view_constant_of_type<CharT>(Str, JSONCONS_WIDEN(Str))
+#define JSONCONS_PP_EXPAND(X) X    
+#define JSONCONS_PP_STRINGIFY(a) #a
+#define JSONCONS_PP_QUOTE(Prefix, A) JSONCONS_PP_EXPAND(Prefix ## #A)
+#define JSONCONS_PP_WIDEN(A) JSONCONS_PP_EXPAND(L ## A)
+
+#define JSONCONS_CSTRING_CONSTANT(CharT, Str) cstring_constant_of_type<CharT>(Str, JSONCONS_PP_WIDEN(Str))
+#define JSONCONS_STRING_CONSTANT(CharT, Str) string_constant_of_type<CharT>(Str, JSONCONS_PP_WIDEN(Str))
+#define JSONCONS_STRING_VIEW_CONSTANT(CharT, Str) string_view_constant_of_type<CharT>(Str, JSONCONS_PP_WIDEN(Str))
 
 
 #if defined(JSONCONS_VISITOR_VOID_RETURN) 

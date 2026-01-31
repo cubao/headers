@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -87,10 +87,11 @@ namespace jsonschema {
             
             for (const auto& prop : sch.object_range())
             {
+                std::string sub_keys[] = {keyword};
                 pattern_properties.emplace_back(
                     std::make_pair(
                         std::regex(prop.key(), std::regex::ECMAScript),
-                        factory_->make_cross_draft_schema_validator(context, prop.value(), {}, anchor_dict)));
+                        factory_->make_cross_draft_schema_validator(context, prop.value(), sub_keys, anchor_dict)));
                 
             }
 
@@ -237,7 +238,7 @@ namespace jsonschema {
 
             switch (sch.type()) 
             { 
-                case json_type::string_value: 
+                case json_type::string: 
                 {
                     auto type = sch.template as<std::string>();
                     if (type == "null")
@@ -275,7 +276,7 @@ namespace jsonschema {
                     break;
                 } 
 
-                case json_type::array_value: // "type": ["type1", "type2"]
+                case json_type::array: // "type": ["type1", "type2"]
                 {
                     for (const auto& item : sch.array_range())
                     {
@@ -619,7 +620,7 @@ namespace jsonschema {
             {
                 switch (dep.value().type()) 
                 {
-                    case json_type::array_value:
+                    case json_type::array:
                     {
                         auto location = context.make_schema_location("dependencies");
                         dependent_required.emplace(dep.key(), 
@@ -627,8 +628,8 @@ namespace jsonschema {
                                 dep.value(), sch));
                         break;
                     }
-                    case json_type::bool_value:
-                    case json_type::object_value:
+                    case json_type::boolean:
+                    case json_type::object:
                     {
                         std::string sub_keys[] = {"dependencies"};
                         dependent_schemas.emplace(dep.key(),
@@ -671,7 +672,7 @@ namespace jsonschema {
             {
                 switch (dep.value().type()) 
                 {
-                    case json_type::array_value:
+                    case json_type::array:
                     {
                         auto location = context.make_schema_location("dependentRequired");
                         dependent_required.emplace(dep.key(), 
@@ -700,8 +701,8 @@ namespace jsonschema {
             {
                 switch (dep.value().type()) 
                 {
-                    case json_type::bool_value:
-                    case json_type::object_value:
+                    case json_type::boolean:
+                    case json_type::object:
                     {
                         std::string sub_keys[] = {"dependentSchemas"};
                         dependent_schemas.emplace(dep.key(),
@@ -728,7 +729,7 @@ namespace jsonschema {
 
             uri schema_location{context.make_schema_location("items")};
 
-            if (sch.type() == json_type::array_value) 
+            if (sch.type() == json_type::array) 
             {
                 std::size_t c = 0;
                 for (const auto& subsch : sch.array_range())
@@ -819,7 +820,7 @@ namespace jsonschema {
 
             uri schema_location{context.make_schema_location("prefixItems")};
 
-            if (sch.type() == json_type::array_value) 
+            if (sch.type() == json_type::array) 
             {
                 std::size_t c = 0;
                 for (const auto& subsch : sch.array_range())

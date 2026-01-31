@@ -1,4 +1,4 @@
-/// Copyright 2013-2025 Daniel Parker
+/// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -44,7 +44,7 @@ namespace jsonpath {
         unidentified_error,
         unexpected_eof,
         expected_colon_dot_left_bracket_comma_or_rbracket,
-        argument_to_unflatten_invalid,
+        invalid_argument_to_unflatten,
         invalid_flattened_key,
         step_cannot_be_zero,
         invalid_number,
@@ -118,7 +118,7 @@ namespace jsonpath {
                     return "Unexpected EOF while parsing jsonpath expression";
                 case jsonpath_errc::expected_colon_dot_left_bracket_comma_or_rbracket:
                     return "Expected ':', '.', '[', ',', or ']'";
-                case jsonpath_errc::argument_to_unflatten_invalid:
+                case jsonpath_errc::invalid_argument_to_unflatten:
                     return "Argument to unflatten must be an object";
                 case jsonpath_errc::invalid_flattened_key:
                     return "Flattened key is invalid";

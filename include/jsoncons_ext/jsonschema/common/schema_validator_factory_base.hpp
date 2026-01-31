@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -158,7 +158,7 @@ namespace jsonschema {
                     }
                     else
                     {
-                        JSONCONS_THROW(jsonschema::schema_error("Don't know how to load JSON Schema '" + loc.base().string() + "'" ));
+                        JSONCONS_THROW(jsonschema::schema_error("Don't know how to load JSON Schema '" + loc.string() + "'" ));
                     }
                 }
             }
@@ -214,7 +214,7 @@ namespace jsonschema {
                 }
 
                 // recursively add possible subschemas of unknown keywords
-                if (value.type() == json_type::object_value)
+                if (value.type() == json_type::object)
                 {
                     for (const auto& subsch : value.object_range())
                     {
@@ -304,7 +304,7 @@ namespace jsonschema {
             schema_validator_ptr_type schema_val = schema_validator_ptr_type{};
             switch (sch.type())
             {
-                case json_type::object_value:
+                case json_type::object:
                 {
                     auto it = sch.find("$schema");
                     if (it != sch.object_range().end())
@@ -326,7 +326,7 @@ namespace jsonschema {
                     }
                     break;
                 }
-                case json_type::bool_value:
+                case json_type::boolean:
                 {
                     return make_schema_validator(context, std::move(sch), keys, anchor_dict);
                 }

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -10,7 +10,7 @@
 #include <algorithm> 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <ostream>
 #include <string> // std::string
 #include <system_error>
 #include <type_traits>
@@ -18,8 +18,8 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
-#include <jsoncons/detail/write_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
+#include <jsoncons/utility/write_number.hpp>
 #include <jsoncons/json_exception.hpp>
 
 namespace jsoncons { 
@@ -162,7 +162,7 @@ namespace jsoncons {
             *this = parse(str, ec);
             if (JSONCONS_UNLIKELY(ec))
             {
-                JSONCONS_THROW(std::system_error(ec));
+                JSONCONS_THROW(std::system_error(ec, std::string(str)));
             }
         }
 
@@ -213,7 +213,7 @@ namespace jsoncons {
                 {
                     if (!validate_port(port))
                     {
-                        JSONCONS_THROW(std::system_error(uri_errc::invalid_port));
+                        JSONCONS_THROW(std::system_error(uri_errc::invalid_port, std::string(port)));
                     }
 
                     uri_string_.append(":");
@@ -710,7 +710,7 @@ namespace jsoncons {
                     auto hex = encoded.substr(i + 1, 2);
 
                     uint8_t n;
-                    jsoncons::detail::hex_to_integer(hex.data(), hex.size(), n);
+                    jsoncons::hex_to_integer<uint8_t>(hex.data(), hex.size(), n);
                     decoded.push_back((char)n);
                     i += 3;
                 }
@@ -1419,7 +1419,7 @@ namespace jsoncons {
                             {
                                 encoded.push_back('0');
                             }
-                            jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                            jsoncons::integer_to_hex((uint8_t)ch, encoded);
                         }
                         else if (escaped)
                         {
@@ -1452,7 +1452,7 @@ namespace jsoncons {
                         if (!is_unreserved(ch) && !is_punct(ch))
                         {
                             encoded.push_back('%');
-                            jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                            jsoncons::integer_to_hex((uint8_t)ch, encoded);
                         }
                         else
                         {
@@ -1484,7 +1484,7 @@ namespace jsoncons {
                     {
                         encoded.push_back('0');
                     }
-                    jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                    jsoncons::integer_to_hex((uint8_t)ch, encoded);
                 }
                 else if (escaped)
                 {
@@ -1506,7 +1506,7 @@ namespace jsoncons {
                 if (!is_unreserved(ch) && !is_punct(ch))
                 {
                     encoded.push_back('%');
-                    jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                    jsoncons::integer_to_hex((uint8_t)ch, encoded);
                 }
                 else
                 {
@@ -1534,7 +1534,7 @@ namespace jsoncons {
                     {
                         encoded.push_back('0');
                     }
-                    jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                    jsoncons::integer_to_hex((uint8_t)ch, encoded);
                 }
                 else if (escaped)
                 {
@@ -1556,7 +1556,7 @@ namespace jsoncons {
                 if (!is_unreserved(ch) && !is_reserved(ch))
                 {
                     encoded.push_back('%');
-                    jsoncons::detail::integer_to_hex((uint8_t)ch, encoded);
+                    jsoncons::integer_to_hex((uint8_t)ch, encoded);
                 }
                 else
                 {
@@ -1667,7 +1667,7 @@ namespace jsoncons {
         static bool validate_port(string_view port)
         {
             uint16_t p;
-            auto result = jsoncons::detail::to_integer(port.data(), port.length(), p);
+            auto result = jsoncons::to_integer<uint16_t>(port.data(), port.length(), p);
             return static_cast<bool>(result);
         }
         

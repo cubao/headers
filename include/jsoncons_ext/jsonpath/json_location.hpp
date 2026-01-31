@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2025 Daniel Parker
+﻿// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -158,7 +158,7 @@ namespace jsonpath {
             allocator_type alloc_;
             std::size_t line_{1};
             std::size_t column_{1};
-            const char_type* end_input_{nullptr};
+            const char_type* input_end_{nullptr};
             const char_type* p_{nullptr};
 
         public:
@@ -200,7 +200,7 @@ namespace jsonpath {
 
                 string_type buffer(alloc_);
 
-                end_input_ = path.data() + path.length();
+                input_end_ = path.data() + path.length();
                 p_ = path.data();
 
 
@@ -208,7 +208,7 @@ namespace jsonpath {
 
                 json_location_state state = json_location_state::start;
 
-                while (p_ < end_input_)
+                while (p_ < input_end_)
                 {
                     switch (state)
                     {
@@ -411,7 +411,7 @@ namespace jsonpath {
                                     break;
                                 default:
                                     std::size_t n{0};
-                                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                                     if (!r)
                                     {
                                         ec = jsonpath_errc::invalid_number;
@@ -510,7 +510,7 @@ namespace jsonpath {
                 else if (state == json_location_state::digit)
                 {
                     std::size_t n{ 0 };
-                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), n);
+                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), n);
                     if (!r)
                     {
                         ec = jsonpath_errc::invalid_number;
@@ -535,7 +535,7 @@ namespace jsonpath {
                         ++column_;
                         break;
                     case '\r':
-                        if ((p_+1 < end_input_) && (*(p_+1) == '\n'))
+                        if ((p_+1 < input_end_) && (*(p_+1) == '\n'))
                         {
                             ++p_;
                         }
@@ -879,7 +879,7 @@ namespace jsonpath {
             else
             {
                 buffer.push_back('[');
-                jsoncons::detail::from_integer(element.index(), buffer);
+                jsoncons::from_integer(element.index(), buffer);
                 buffer.push_back(']');
             }
         }

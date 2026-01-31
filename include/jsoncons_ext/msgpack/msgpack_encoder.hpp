@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -18,12 +18,12 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/sink.hpp>
 #include <jsoncons/utility/bigint.hpp>
 #include <jsoncons/utility/binary.hpp>
@@ -82,7 +82,7 @@ namespace msgpack {
         };
 
         Sink sink_;
-        const msgpack_encode_options options_;
+        int max_nesting_depth_;
         allocator_type alloc_;
 
         std::vector<stack_item> stack_;
@@ -102,7 +102,7 @@ namespace msgpack {
             const msgpack_encode_options& options, 
             const Allocator& alloc = Allocator())
            : sink_(std::forward<Sink>(sink)),
-             options_(options),
+             max_nesting_depth_(options.max_nesting_depth()),
              alloc_(alloc)
         {
         }
@@ -143,7 +143,7 @@ namespace msgpack {
 
         JSONCONS_VISITOR_RETURN_TYPE visit_begin_object(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) final
         {
-            if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+            if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
             {
                 ec = msgpack_errc::max_nesting_depth_exceeded;
                 JSONCONS_VISITOR_RETURN;
@@ -202,7 +202,7 @@ namespace msgpack {
 
         JSONCONS_VISITOR_RETURN_TYPE visit_begin_array(std::size_t length, semantic_tag, const ser_context&, std::error_code& ec) final
         {
-            if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+            if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
             {
                 ec = msgpack_errc::max_nesting_depth_exceeded;
                 JSONCONS_VISITOR_RETURN;
@@ -302,7 +302,7 @@ namespace msgpack {
                 case semantic_tag::epoch_second:
                 {
                     int64_t seconds;
-                    auto result = jsoncons::detail::to_integer(sv.data(), sv.length(), seconds);
+                    auto result = jsoncons::to_integer(sv.data(), sv.length(), seconds);
                     if (!result)
                     {
                         ec = msgpack_errc::invalid_timestamp;
@@ -313,7 +313,13 @@ namespace msgpack {
                 }
                 case semantic_tag::epoch_milli:
                 {
-                    bigint n = bigint::from_string(sv.data(), sv.length());
+                    bigint n;
+                    auto result = to_bigint(sv.data(), sv.length(), n);
+                    if (!result)
+                    {
+                        ec = msgpack_errc::invalid_timestamp;
+                        JSONCONS_VISITOR_RETURN;
+                    }
                     if (n != 0)
                     {
                         bigint q;
@@ -335,7 +341,13 @@ namespace msgpack {
                 }
                 case semantic_tag::epoch_nano:
                 {
-                    bigint n = bigint::from_string(sv.data(), sv.length());
+                    bigint n;
+                    auto result = to_bigint(sv.data(), sv.length(), n);
+                    if (!result)
+                    {
+                        ec = msgpack_errc::invalid_timestamp;
+                        JSONCONS_VISITOR_RETURN;
+                    }
                     if (n != 0)
                     {
                         bigint q;

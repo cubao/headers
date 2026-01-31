@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,7 +20,7 @@
 #include <jsoncons/item_event_visitor.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/source.hpp>
 #include <jsoncons/utility/bigint.hpp>
 #include <jsoncons/utility/binary.hpp>
@@ -73,7 +73,7 @@ class basic_msgpack_parser : public ser_context
     int mark_level_{0};
 
     Source source_;
-    msgpack_decode_options options_;
+    int max_nesting_depth_;
     std::basic_string<char,std::char_traits<char>,char_allocator_type> text_buffer_;
     std::vector<uint8_t,byte_allocator_type> bytes_buffer_;
     std::vector<parse_state,parse_state_allocator_type> state_stack_;
@@ -84,7 +84,7 @@ public:
                          const msgpack_decode_options& options = msgpack_decode_options(),
                          const Allocator& alloc = Allocator())
        : source_(std::forward<Sourceable>(source)),
-         options_(options),
+         max_nesting_depth_(options.max_nesting_depth()),
          text_buffer_(alloc),
          bytes_buffer_(alloc),
          state_stack_(alloc)
@@ -671,7 +671,7 @@ private:
 
     void begin_array(item_event_visitor& visitor, uint8_t type, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = msgpack_errc::max_nesting_depth_exceeded;
             more_ = false;
@@ -698,7 +698,7 @@ private:
 
     void begin_object(item_event_visitor& visitor, uint8_t type, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = msgpack_errc::max_nesting_depth_exceeded;
             more_ = false;

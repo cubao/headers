@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -29,7 +29,7 @@
 namespace jsoncons { 
 namespace jsonpath {
 
-    template <typename Json,typename TempAllocator =std::allocator<char>>
+    template <typename Json,typename TempAlloc =std::allocator<char>>
     class jsonpath_expression
     {
     public:
@@ -52,11 +52,11 @@ namespace jsonpath {
         const_path_expression_type const_expr_;
         path_expression_type expr_;
     public:
-        jsonpath_expression(const allocator_set<allocator_type,TempAllocator>& alloc_set,
+        jsonpath_expression(const allocator_set<allocator_type,TempAlloc>& aset,
             std::unique_ptr<static_resources_type>&& resources,
             const_path_expression_type&& const_expr, 
             path_expression_type&& expr)
-            : alloc_(alloc_set.get_allocator()),
+            : alloc_(aset.get_allocator()),
               static_resources_(std::move(resources)), 
               const_expr_(std::move(const_expr)),
               expr_(std::move(expr))
@@ -174,25 +174,25 @@ namespace jsonpath {
         evaluator_type evaluator;
         auto expr = evaluator.compile(*resources, path);
 
-        return jsonpath_expression<Json>(jsoncons::combine_allocators(), 
+        return jsonpath_expression<Json>(jsoncons::make_alloc_set(), 
             std::move(resources), std::move(const_expr), std::move(expr));
     }
 
     template <typename Json>
     jsonpath_expression<Json> make_expression(const typename Json::string_view_type& expr, std::error_code& ec)
     {
-        return make_expression<Json>(jsoncons::combine_allocators(), expr, custom_functions<Json>(), ec);
+        return make_expression<Json>(jsoncons::make_alloc_set(), expr, custom_functions<Json>(), ec);
     }
 
-    template <typename Json,typename TempAllocator >
-    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAllocator>& alloc_set, 
+    template <typename Json,typename TempAlloc >
+    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAlloc>& aset, 
         const typename Json::string_view_type& expr, std::error_code& ec)
     {
-        return make_expression<Json>(alloc_set, expr, custom_functions<Json>(), ec);
+        return make_expression<Json>(aset, expr, custom_functions<Json>(), ec);
     }
 
-    template <typename Json,typename TempAllocator >
-    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAllocator>& alloc_set, 
+    template <typename Json,typename TempAlloc >
+    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAlloc>& aset, 
         const typename Json::string_view_type& path, 
         const custom_functions<Json>& funcs = custom_functions<Json>())
     {
@@ -204,19 +204,19 @@ namespace jsonpath {
         using const_evaluator_type = typename jsoncons::jsonpath::detail::jsonpath_evaluator<value_type, const_reference>;
 
         auto resources = jsoncons::make_unique<static_resources_type>(funcs,
-            alloc_set.get_allocator());
-        const_evaluator_type const_evaluator{alloc_set.get_allocator()};
+            aset.get_allocator());
+        const_evaluator_type const_evaluator{aset.get_allocator()};
         auto const_expr = const_evaluator.compile(*resources, path);
 
-        evaluator_type evaluator{alloc_set.get_allocator()};
+        evaluator_type evaluator{aset.get_allocator()};
         auto expr = evaluator.compile(*resources, path);
 
-        return jsonpath_expression<Json>(alloc_set, 
+        return jsonpath_expression<Json>(aset, 
             std::move(resources), std::move(const_expr), std::move(expr));
     }
 
-    template <typename Json,typename TempAllocator >
-    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAllocator>& alloc_set,
+    template <typename Json,typename TempAlloc >
+    jsonpath_expression<Json> make_expression(const allocator_set<typename Json::allocator_type,TempAlloc>& aset,
         const typename Json::string_view_type& path,
         const jsoncons::jsonpath::custom_functions<typename jsonpath_traits<Json>::value_type>& funcs, std::error_code& ec)
     {
@@ -228,13 +228,13 @@ namespace jsonpath {
         using const_evaluator_type = typename jsoncons::jsonpath::detail::jsonpath_evaluator<value_type, const_reference>;
 
         auto resources = jsoncons::make_unique<static_resources_type>(funcs);
-        const_evaluator_type const_evaluator{alloc_set.get_allocator()};
+        const_evaluator_type const_evaluator{aset.get_allocator()};
         auto const_expr = const_evaluator.compile(*resources, path, ec);
 
-        evaluator_type evaluator{alloc_set.get_allocator()};
+        evaluator_type evaluator{aset.get_allocator()};
         auto expr = evaluator.compile(*resources, path, ec);
 
-        return jsonpath_expression<Json>(alloc_set, 
+        return jsonpath_expression<Json>(aset, 
             std::move(resources), std::move(const_expr), std::move(expr));
     }
 

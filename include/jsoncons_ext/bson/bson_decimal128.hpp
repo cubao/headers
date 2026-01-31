@@ -40,8 +40,8 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
-#include <jsoncons/detail/write_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
+#include <jsoncons/utility/write_number.hpp>
 
 namespace jsoncons { 
 namespace bson {
@@ -387,7 +387,7 @@ namespace bson {
                }
                *str_out = 0;
               //strcpy_s (str_out, last-str_out, bson_decimal128_inf.c_str());
-              return decimal128_to_chars_result{str_out, std::errc()};
+              return decimal128_to_chars_result{str_out, std::errc{}};
            } else if (combination == combination_nan) { /* NaN */
                /* first, not str_out, to erase the sign */
                str_out = first;
@@ -399,7 +399,7 @@ namespace bson {
                *str_out = 0;
               //strcpy_s (first, last-first, bson_decimal128_nan.c_str());
               /* we don't care about the NaN payload. */
-               return decimal128_to_chars_result{str_out, std::errc()};
+               return decimal128_to_chars_result{str_out, std::errc{}};
            } else {
               biased_exponent = (high >> 15) & exponent_mask;
               significand_msb = 0x8 + ((high >> 14) & 0x1);
@@ -494,7 +494,7 @@ namespace bson {
            if (scientific_exponent >= 0) {
                s.push_back('+');
            }
-           jsoncons::detail::from_integer(scientific_exponent, s);
+           jsoncons::from_integer(scientific_exponent, s);
            if (str_out + s.size() < last) 
            {
                std::memcpy(str_out, s.data(), s.size());
@@ -536,7 +536,7 @@ namespace bson {
               }
            }
         }
-        return decimal128_to_chars_result{str_out, std::errc()};
+        return decimal128_to_chars_result{str_out, std::errc{}};
     }
 
 
@@ -618,10 +618,10 @@ namespace bson {
                detail::dec128_istreq (str_read, last, infinity_str.data(), infinity_str.data()+infinity_str.length())) 
            {
                dec = is_negative ? decimal128_limits::neg_infinity() : decimal128_limits::infinity();
-              return decimal128_from_chars_result{str_read,std::errc()};
+              return decimal128_from_chars_result{str_read,std::errc{}};
            } else if (detail::dec128_istreq (str_read, last, nan_str.data(), nan_str.data()+nan_str.length())) {
               dec = decimal128_limits::nan();
-              return decimal128_from_chars_result{str_read,std::errc()};
+              return decimal128_from_chars_result{str_read,std::errc{}};
            }
  
            dec = decimal128_limits::nan();
@@ -677,8 +677,8 @@ namespace bson {
            if (*str_read == '+') {
                ++str_read;
            }
-           auto result = jsoncons::detail::to_integer(str_read, last - str_read, exponent);
-           if (result.ec != jsoncons::detail::to_integer_errc()) 
+           auto result = jsoncons::to_integer(str_read, last - str_read, exponent);
+           if (result.ec != std::errc{}) 
            {
                dec = decimal128_limits::nan();
                return decimal128_from_chars_result{str_read,std::errc::invalid_argument};
@@ -865,7 +865,7 @@ namespace bson {
            dec.high |= 0x8000000000000000ull;
         }
  
-        return decimal128_from_chars_result{str_read,std::errc()};
+        return decimal128_from_chars_result{str_read,std::errc{}};
     }
 
 } // namespace bson

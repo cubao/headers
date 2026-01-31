@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -80,10 +80,6 @@ namespace jsoncons {
         key_type key_;
         value_type value_;
     public:
-
-        key_value() noexcept
-        {
-        }
 
         template <typename... Args>
         key_value(key_type&& name,  Args&& ... args) 
@@ -249,20 +245,36 @@ namespace std
 namespace jsoncons {
 
     template <typename KeyT,typename ValueT>
-    struct get_key_value
+    struct make_key_value
     {
         using key_value_type = key_value<KeyT,ValueT>;
 
         template <typename T1,typename T2>
-        key_value_type operator()(const std::pair<T1,T2>& p) // Remove
+        key_value_type operator()(const std::pair<T1,T2>& p) 
         {
-            return key_value_type(p.first,p.second);
+            return key_value_type(KeyT(p.first),p.second);
         }
+
+        template <typename T1,typename T2, typename Alloc>
+        key_value_type operator()(const std::pair<T1,T2>& p, const Alloc& alloc) 
+        {
+            return key_value_type(jsoncons::make_obj_using_allocator<KeyT>(alloc, p.first), 
+                p.second, alloc);
+        }
+
         template <typename T1,typename T2>
         key_value_type operator()(std::pair<T1,T2>&& p)
         {
             return key_value_type(std::forward<T1>(p.first),std::forward<T2>(p.second));
         }
+
+        template <typename T1,typename T2, typename Alloc>
+        key_value_type operator()(std::pair<T1,T2>&& p, const Alloc& alloc)
+        {
+            return key_value_type(jsoncons::make_obj_using_allocator<KeyT>(alloc, std::forward<T1>(p.first)), 
+                std::forward<T2>(p.second), alloc);
+        }
+
         template <typename T1,typename T2>
         const key_value_type& operator()(const key_value<T1,T2>& p)
         {
@@ -365,7 +377,8 @@ namespace jsoncons {
             members_.reserve(count);
             for (auto it = first; it != last; ++it)
             {
-                members_.emplace_back(key_type((*it).first,get_allocator()), (*it).second);
+                auto kv = make_key_value<KeyT,Json>()(*it);
+                members_.emplace_back(std::move(kv));
             }
             std::stable_sort(members_.begin(),members_.end(),
                              [](const key_value_type& a, const key_value_type& b) -> bool {return a.key().compare(b.key()) < 0;});
@@ -375,8 +388,7 @@ namespace jsoncons {
         }
 
         template <typename InputIt>
-        sorted_json_object(InputIt first, InputIt last, 
-                    const allocator_type& alloc)
+        sorted_json_object(InputIt first, InputIt last, const allocator_type& alloc)
             : allocator_holder<allocator_type>(alloc), 
               members_(key_value_allocator_type(alloc))
         {
@@ -384,7 +396,8 @@ namespace jsoncons {
             members_.reserve(count);
             for (auto it = first; it != last; ++it)
             {
-                members_.emplace_back(key_type((*it).first.c_str(), (*it).first.size(), get_allocator()), (*it).second);
+                auto kv = make_key_value<KeyT,Json>()(*it, alloc);
+                members_.emplace_back(std::move(kv));
             }
             std::stable_sort(members_.begin(), members_.end(),
                              [](const key_value_type& a, const key_value_type& b) -> bool {return a.key().compare(b.key()) < 0;});
@@ -838,7 +851,7 @@ namespace jsoncons {
             {
                 auto pos = std::lower_bound(members_.begin(),members_.end(), (*it).key(), 
                                             Comp());   
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     members_.emplace_back(*it);
                 }
@@ -874,7 +887,7 @@ namespace jsoncons {
                     pos = std::lower_bound(members_.begin(),members_.end(), (*it).key(), 
                                           Comp());        
                 }
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     members_.emplace_back(*it);
                     hint = members_.begin() + (members_.size() - 1);
@@ -904,7 +917,7 @@ namespace jsoncons {
             {
                 auto pos = std::lower_bound(members_.begin(),members_.end(), (*it).key(), 
                                             Comp());   
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     members_.emplace_back(*it);
                 }
@@ -940,7 +953,7 @@ namespace jsoncons {
                     pos = std::lower_bound(members_.begin(),members_.end(), (*it).key(), 
                                           Comp());        
                 }
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     members_.emplace_back(*it);
                     hint = members_.begin() + (members_.size() - 1);
@@ -1075,10 +1088,12 @@ namespace jsoncons {
         template <typename InputIt>
         order_preserving_json_object(InputIt first, InputIt last)
         {
+            std::size_t count = std::distance(first,last);
+            members_.reserve(count);
             std::unordered_set<key_type,MyHash> keys;
             for (auto it = first; it != last; ++it)
             {
-                auto kv = get_key_value<KeyT,Json>()(*it);
+                auto kv = make_key_value<KeyT,Json>()(*it);
                 if (keys.find(kv.key()) == keys.end())
                 {
                     keys.emplace(kv.key());
@@ -1088,15 +1103,14 @@ namespace jsoncons {
         }
 
         template <typename InputIt>
-        order_preserving_json_object(InputIt first, InputIt last, 
-                    const allocator_type& alloc)
+        order_preserving_json_object(InputIt first, InputIt last, const allocator_type& alloc)
             : allocator_holder<allocator_type>(alloc), 
               members_(key_value_allocator_type(alloc))
         {
             std::unordered_set<key_type,MyHash> keys;
             for (auto it = first; it != last; ++it)
             {
-                auto kv = get_key_value<KeyT,Json>()(*it);
+                auto kv = make_key_value<KeyT,Json>()(*it, alloc);
                 if (keys.find(kv.key()) == keys.end())
                 {
                     keys.emplace(kv.key());
@@ -1343,7 +1357,7 @@ namespace jsoncons {
         {
             for (auto it = first; it != last; ++it)
             {
-                members_.emplace_back(get_key_value<KeyT,Json>()(*it));
+                members_.emplace_back(make_key_value<KeyT,Json>()(*it));
             }
         }
    
@@ -1452,7 +1466,7 @@ namespace jsoncons {
             for (; it != end; ++it)
             {
                 auto pos = find((*it).key());
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     try_emplace((*it).key(),std::move((*it).value()));
                 }
@@ -1517,7 +1531,7 @@ namespace jsoncons {
             for (; it != end; ++it)
             {
                 auto pos = find((*it).key());
-                if (pos == members_.end() )
+                if (pos == members_.end())
                 {
                     insert_or_assign((*it).key(),std::move((*it).value()));
                 }

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -17,7 +17,7 @@
 #include <jsoncons/config/jsoncons_config.hpp>
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/json_visitor.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/source.hpp>
 #include <jsoncons/staj_cursor.hpp>
 #include <jsoncons_ext/cbor/cbor_parser.hpp>
@@ -53,9 +53,9 @@ public:
           cursor_handler_adaptor_(cursor_visitor_, alloc)
     {
         parser_.cursor_mode(true);
-        if (!done())
+        if (!read_done())
         {
-            next();
+            read_next();
         }
     }
 
@@ -92,9 +92,9 @@ public:
          eof_(false)
     {
         parser_.cursor_mode(true);
-        if (!done())
+        if (!read_done())
         {
-            next(ec);
+            read_next(ec);
         }
     }
 
@@ -109,9 +109,9 @@ public:
         cursor_visitor_.reset();
         cursor_handler_adaptor_.reset();
         eof_ = false;
-        if (!done())
+        if (!read_done())
         {
-            next();
+            read_next();
         }
     }
 
@@ -122,9 +122,9 @@ public:
         cursor_visitor_.reset();
         cursor_handler_adaptor_.reset();
         eof_ = false;
-        if (!done())
+        if (!read_done())
         {
-            next();
+            read_next();
         }
     }
 
@@ -134,9 +134,9 @@ public:
         cursor_visitor_.reset();
         cursor_handler_adaptor_.reset();
         eof_ = false;
-        if (!done())
+        if (!read_done())
         {
-            next(ec);
+            read_next(ec);
         }
     }
 
@@ -147,9 +147,9 @@ public:
         cursor_visitor_.reset();
         cursor_handler_adaptor_.reset();
         eof_ = false;
-        if (!done())
+        if (!read_done())
         {
-            next(ec);
+            read_next(ec);
         }
     }
 
@@ -219,12 +219,7 @@ public:
 
     void next() override
     {
-        std::error_code ec;
-        next(ec);
-        if (JSONCONS_UNLIKELY(ec))
-        {
-            JSONCONS_THROW(ser_error(ec,parser_.line(),parser_.column()));
-        }
+        read_next();
     }
 
     void next(std::error_code& ec) override
@@ -260,6 +255,22 @@ public:
     }
 
 private:
+
+    bool read_done() const
+    {
+        return parser_.done();
+    }
+
+    void read_next()
+    {
+        std::error_code ec;
+        read_next(ec);
+        if (JSONCONS_UNLIKELY(ec))
+        {
+            JSONCONS_THROW(ser_error(ec,parser_.line(),parser_.column()));
+        }
+    }
+
     void read_next(std::error_code& ec)
     {
         if (cursor_visitor_.in_available())
