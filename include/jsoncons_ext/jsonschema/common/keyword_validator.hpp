@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // 
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -10,7 +10,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <iostream>
 #include <map>
 #include <set>
 #include <string>
@@ -456,7 +455,7 @@ namespace jsonschema {
             {
                 auto s = instance.template as<jsoncons::string_view>();
                 std::string content;
-                auto retval = jsoncons::decode_base64(s.begin(), s.end(), content);
+                auto retval = jsoncons::base64_to_bytes(s.begin(), s.end(), content);
                 if (retval.ec != jsoncons::conv_errc::success)
                 {
                     walk_result result = reporter.error(this->make_validation_message(
@@ -527,7 +526,7 @@ namespace jsonschema {
             if (content_encoding_ == "base64")
             {
                 std::string content;
-                auto retval = jsoncons::decode_base64(str.begin(), str.end(), content);
+                auto retval = jsoncons::base64_to_bytes(str.begin(), str.end(), content);
                 if (retval.ec != jsoncons::conv_errc::success)
                 {
                     return walk_result::advance;
@@ -1225,14 +1224,16 @@ namespace jsonschema {
             eval_context<Json> this_context(context, this->keyword_name());
 
             evaluation_results local_results1;
+            Json local_patch1(json_array_arg);
             std::size_t count = 0;
             for (std::size_t i = 0; i < validators_.size(); ++i) 
             {
                 evaluation_results local_results2;
+                Json local_patch2{json_array_arg};
                 eval_context<Json> item_context(this_context, i);
 
                 std::size_t errors = local_reporter.errors.size();
-                walk_result result = validators_[i]->validate(item_context, instance, instance_location, local_results2, local_reporter, patch);
+                walk_result result = validators_[i]->validate(item_context, instance, instance_location, local_results2, local_reporter, local_patch2);
                 if (result == walk_result::abort)
                 {
                     return result;
@@ -1240,6 +1241,10 @@ namespace jsonschema {
                 if (errors == local_reporter.errors.size())
                 {
                     local_results1.merge(local_results2);
+                    for (auto& item : local_patch2.array_range())
+                    {
+                        local_patch1.push_back(std::move(item));
+                    }
                     ++count;
                 }
                 //std::cout << "success: " << i << " " << success << "\n";
@@ -1248,6 +1253,10 @@ namespace jsonschema {
             if (count > 0)
             {
                 results.merge(local_results1);
+                for (auto& item : local_patch1.array_range())
+                {
+                    patch.push_back(std::move(item));
+                }
             }
             else 
             {
@@ -1321,14 +1330,16 @@ namespace jsonschema {
             eval_context<Json> this_context(context, this->keyword_name());
 
             evaluation_results local_results1;
+            Json local_patch1(json_array_arg);
             std::vector<std::size_t> indices;
             for (std::size_t i = 0; i < validators_.size(); ++i) 
             {
                 evaluation_results local_results2;
+                Json local_patch2{json_array_arg};
                 eval_context<Json> item_context(this_context, i);
 
                 std::size_t errors = local_reporter.errors.size();
-                walk_result result = validators_[i]->validate(item_context, instance, instance_location, local_results2, local_reporter, patch);
+                walk_result result = validators_[i]->validate(item_context, instance, instance_location, local_results2, local_reporter, local_patch2);
                 if (result == walk_result::abort)
                 {
                     return result;
@@ -1337,14 +1348,21 @@ namespace jsonschema {
                 {
                     local_results1.merge(local_results2);
                     indices.push_back(i);
+                    for (auto& item : local_patch2.array_range())
+                    {
+                        local_patch1.push_back(std::move(item));
+                    }
                 }
                 //std::cout << "success: " << i << " " << success << "\n";
             }
-
-            
+           
             if (indices.size() == 1)
             {
                 results.merge(local_results1);
+                for (auto& item : local_patch1.array_range())
+                {
+                    patch.push_back(std::move(item));
+                }
             }
             else 
             {
@@ -1568,9 +1586,9 @@ namespace jsonschema {
             else if (instance.is_string_view() && instance.tag() == semantic_tag::bigint)
             {
                 auto sv1 = instance.as_string_view();
-                bigint n1 = bigint::from_string(sv1.data(), sv1.length());
+                bigint n1(sv1.data(), sv1.length());
                 auto s2 = value_.as_string();
-                bigint n2 = bigint::from_string(s2.data(), s2.length());
+                bigint n2(s2.data(), s2.length());
                 if (n1 > n2)
                 {
                     walk_result result = reporter.error(this->make_validation_message(
@@ -1664,9 +1682,9 @@ namespace jsonschema {
             else if (instance.is_string_view() && instance.tag() == semantic_tag::bigint)
             {
                 auto sv1 = instance.as_string_view();
-                bigint n1 = bigint::from_string(sv1.data(), sv1.length());
+                bigint n1(sv1.data(), sv1.length());
                 auto s2 = value_.as_string();
-                bigint n2 = bigint::from_string(s2.data(), s2.length());
+                bigint n2(s2.data(), s2.length());
                 if (n1 >= n2)
                 {
                     walk_result result = reporter.error(this->make_validation_message(
@@ -1760,9 +1778,9 @@ namespace jsonschema {
             else if (instance.is_string_view() && instance.tag() == semantic_tag::bigint)
             {
                 auto sv1 = instance.as_string_view();
-                bigint n1 = bigint::from_string(sv1.data(), sv1.length());
+                bigint n1(sv1.data(), sv1.length());
                 auto s2 = value_.as_string();
-                bigint n2 = bigint::from_string(s2.data(), s2.length());
+                bigint n2(s2.data(), s2.length());
                 if (n1 < n2)
                 {
                     walk_result result = reporter.error(this->make_validation_message(
@@ -1856,9 +1874,9 @@ namespace jsonschema {
             else if (instance.is_string_view() && instance.tag() == semantic_tag::bigint)
             {
                 auto sv1 = instance.as_string_view();
-                bigint n1 = bigint::from_string(sv1.data(), sv1.length());
+                bigint n1(sv1.data(), sv1.length());
                 auto s2 = value_.as_string();
-                bigint n2 = bigint::from_string(s2.data(), s2.length());
+                bigint n2(s2.data(), s2.length());
                 if (n1 <= n2)
                 {
                     walk_result result = reporter.error(this->make_validation_message(
@@ -2491,7 +2509,7 @@ namespace jsonschema {
                         message.append(to_string(expected_types_[i]));
                 }
                 message.append(", found ");
-                message.append(to_schema_type(instance.type()));
+                message.append(to_schema_type(instance.type(), instance.tag()));
 
                 return reporter.error(this->make_validation_message(
                     this_context.eval_path(),
@@ -2501,37 +2519,37 @@ namespace jsonschema {
             return walk_result::advance;
         }
         
-        std::string to_schema_type(json_type type) const
+        std::string to_schema_type(json_type type, semantic_tag tag) const
         {
             switch (type)
             {
-                case json_type::null_value:
+                case json_type::null:
                 {
                     return "null";
                 }
-                case json_type::bool_value:
+                case json_type::boolean:
                 {
                     return "boolean";
                 }
-                case json_type::int64_value:
-                case json_type::uint64_value:
+                case json_type::int64:
+                case json_type::uint64:
                 {
                     return "integer";
                 }
-                case json_type::half_value:
-                case json_type::double_value:
+                case json_type::float16:
+                case json_type::float64:
                 {
                     return "number";
                 }
-                case json_type::string_value:
+                case json_type::string:
                 {
-                    return "string";
+                    return is_number_tag(tag) ? "number" : "string";
                 }
-                case json_type::array_value:
+                case json_type::array:
                 {
                     return "array";
                 }
-                case json_type::object_value:
+                case json_type::object:
                 {
                     return "object";
                 }
@@ -2634,7 +2652,7 @@ namespace jsonschema {
                         // If default value is available, update patch
                         jsonpointer::json_pointer prop_location = instance_location / prop.first;
 
-                        update_patch(patch, prop_location, std::move(*default_value));
+                        update_patch(patch, prop_location, *default_value);
                     }
                 }
             }
@@ -2700,12 +2718,12 @@ namespace jsonschema {
             return walk(context, instance, instance_location, reporter, allowed_properties);
         }
 
-        void update_patch(Json& patch, const jsonpointer::json_pointer& instance_location, Json&& default_value) const
+        void update_patch(Json& patch, const jsonpointer::json_pointer& instance_location, const Json& default_value) const
         {
             Json j;
             j.try_emplace("op", "add"); 
             j.try_emplace("path", instance_location.string()); 
-            j.try_emplace("value", std::forward<Json>(default_value)); 
+            j.try_emplace("value", default_value); 
             patch.push_back(std::move(j));
         }
     };
@@ -2918,7 +2936,6 @@ namespace jsonschema {
                             {
                                 return result;
                             }
-                            break;
                         }
                     }
                 }

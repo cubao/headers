@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2025 Daniel Parker
+﻿// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,7 +15,7 @@
 #include <vector>
 
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/write_number.hpp>
+#include <jsoncons/utility/write_number.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons_ext/jsonpath/jsonpath_utilities.hpp>
 
@@ -242,7 +242,7 @@ namespace jsonpath {
         {
             if (node->node_kind() == path_node_kind::index)
             {
-                if (current->type() != json_type::array_value || node->index() >= current->size())
+                if (current->type() != json_type::array || node->index() >= current->size())
                 {
                     return nullptr; 
                 }
@@ -250,7 +250,7 @@ namespace jsonpath {
             }
             else if (node->node_kind() == path_node_kind::name)
             {
-                if (current->type() != json_type::object_value)
+                if (current->type() != json_type::object)
                 {
                     return nullptr;
                 }
@@ -297,7 +297,7 @@ namespace jsonpath {
                     break;
                 case path_node_kind::index:
                     buffer.push_back('[');
-                    jsoncons::detail::from_integer(node->index(), buffer);
+                    jsoncons::from_integer(node->index(), buffer);
                     buffer.push_back(']');
                     break;
             }

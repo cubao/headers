@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -16,27 +16,39 @@ namespace jsoncons {
 
     enum class json_type : uint8_t 
     {
-        null_value,
-        bool_value,
-        int64_value,
-        uint64_value,
-        half_value,
-        double_value,
-        string_value,
-        byte_string_value,
-        array_value,
-        object_value
+        null,
+        boolean,
+        int64,
+        uint64,
+        float16,
+        float64,
+        string,
+        byte_string,
+        array,
+        object
+    #if !defined(JSONCONS_NO_DEPRECATED)
+        , null_value = null,
+        bool_value = boolean,
+        int64_value = int64,
+        uint64_value = uint64,
+        half_value = float16,
+        double_value = float64,
+        string_value = string,
+        byte_string_value = byte_string,
+        array_value = array,
+        object_value = object
+    #endif
     };
 
     template <typename CharT>
     std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os, json_type type)
     {
         static constexpr const CharT* null_value = JSONCONS_CSTRING_CONSTANT(CharT, "null");
-        static constexpr const CharT* bool_value = JSONCONS_CSTRING_CONSTANT(CharT, "bool");
+        static constexpr const CharT* bool_value = JSONCONS_CSTRING_CONSTANT(CharT, "boolean");
         static constexpr const CharT* int64_value = JSONCONS_CSTRING_CONSTANT(CharT, "int64");
         static constexpr const CharT* uint64_value = JSONCONS_CSTRING_CONSTANT(CharT, "uint64");
-        static constexpr const CharT* half_value = JSONCONS_CSTRING_CONSTANT(CharT, "half");
-        static constexpr const CharT* double_value = JSONCONS_CSTRING_CONSTANT(CharT, "double");
+        static constexpr const CharT* half_value = JSONCONS_CSTRING_CONSTANT(CharT, "float16");
+        static constexpr const CharT* double_value = JSONCONS_CSTRING_CONSTANT(CharT, "float64");
         static constexpr const CharT* string_value = JSONCONS_CSTRING_CONSTANT(CharT, "string");
         static constexpr const CharT* byte_string_value = JSONCONS_CSTRING_CONSTANT(CharT, "byte_string");
         static constexpr const CharT* array_value = JSONCONS_CSTRING_CONSTANT(CharT, "array");
@@ -44,52 +56,52 @@ namespace jsoncons {
 
         switch (type)
         {
-            case json_type::null_value:
+            case json_type::null:
             {
                 os << null_value;
                 break;
             }
-            case json_type::bool_value:
+            case json_type::boolean:
             {
                 os << bool_value;
                 break;
             }
-            case json_type::int64_value:
+            case json_type::int64:
             {
                 os << int64_value;
                 break;
             }
-            case json_type::uint64_value:
+            case json_type::uint64:
             {
                 os << uint64_value;
                 break;
             }
-            case json_type::half_value:
+            case json_type::float16:
             {
                 os << half_value;
                 break;
             }
-            case json_type::double_value:
+            case json_type::float64:
             {
                 os << double_value;
                 break;
             }
-            case json_type::string_value:
+            case json_type::string:
             {
                 os << string_value;
                 break;
             }
-            case json_type::byte_string_value:
+            case json_type::byte_string:
             {
                 os << byte_string_value;
                 break;
             }
-            case json_type::array_value:
+            case json_type::array:
             {
                 os << array_value;
                 break;
             }
-            case json_type::object_value:
+            case json_type::object:
             {
                 os << object_value;
                 break;
@@ -105,11 +117,15 @@ namespace jsoncons {
     
     JSONCONS_INLINE_CONSTEXPR null_type null_arg{};
     
-    struct temp_allocator_arg_t
+    struct temp_alloc_arg_t
     {
-        explicit temp_allocator_arg_t() = default; 
+        explicit temp_alloc_arg_t() = default; 
     };
     
+    JSONCONS_INLINE_CONSTEXPR temp_alloc_arg_t temp_alloc_arg{};
+
+    using temp_allocator_arg_t = temp_alloc_arg_t;
+
     JSONCONS_INLINE_CONSTEXPR temp_allocator_arg_t temp_allocator_arg{};
     
     struct half_arg_t
@@ -176,8 +192,8 @@ namespace jsoncons {
         float64 = 5,              // 0101
         half_float = 6,           // 0110
         short_str = 7,            // 0111
-        json_const_reference = 8, // 1000    
-        json_reference = 9,       // 1001    
+        json_const_ref = 8, // 1000    
+        json_ref = 9,       // 1001    
         byte_str = 12,            // 1100  
         object = 13,              // 1101
         array = 14,               // 1110
@@ -212,8 +228,8 @@ namespace jsoncons {
         static constexpr const CharT* array_value = JSONCONS_CSTRING_CONSTANT(CharT, "array");
         static constexpr const CharT* empty_object_value = JSONCONS_CSTRING_CONSTANT(CharT, "empty_object");
         static constexpr const CharT* object_value = JSONCONS_CSTRING_CONSTANT(CharT, "object");
-        static constexpr const CharT* json_const_reference = JSONCONS_CSTRING_CONSTANT(CharT, "json_const_reference");
-        static constexpr const CharT* json_reference = JSONCONS_CSTRING_CONSTANT(CharT, "json_reference");
+        static constexpr const CharT* json_const_ref = JSONCONS_CSTRING_CONSTANT(CharT, "json_const_ref");
+        static constexpr const CharT* json_ref = JSONCONS_CSTRING_CONSTANT(CharT, "json_ref");
 
         switch (storage)
         {
@@ -277,14 +293,14 @@ namespace jsoncons {
                 os << object_value;
                 break;
             }
-            case json_storage_kind::json_const_reference:
+            case json_storage_kind::json_const_ref:
             {
-                os << json_const_reference;
+                os << json_const_ref;
                 break;
             }
-            case json_storage_kind::json_reference:
+            case json_storage_kind::json_ref:
             {
-                os << json_reference;
+                os << json_ref;
                 break;
             }
         }

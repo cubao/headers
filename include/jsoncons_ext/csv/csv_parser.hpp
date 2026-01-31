@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -19,14 +19,14 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/json_filter.hpp>
 #include <jsoncons/json_reader.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/staj_event.hpp>
 
 #include <jsoncons_ext/csv/csv_error.hpp>
@@ -102,10 +102,10 @@ struct default_csv_parsing
 
 namespace detail {
 
-    template <typename CharT,typename TempAllocator >
+    template <typename CharT,typename TempAlloc >
     class parse_event
     {
-        using temp_allocator_type = TempAllocator;
+        using temp_allocator_type = TempAlloc;
         using string_view_type = typename basic_json_visitor<CharT>::string_view_type;
         using char_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<CharT>;
         using byte_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<uint8_t>;                  
@@ -124,7 +124,7 @@ namespace detail {
         };
         semantic_tag tag;
     public:
-        parse_event(staj_event_type event_type, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(staj_event_type event_type, semantic_tag tag, const TempAlloc& alloc)
             : event_type(event_type), 
               string_value(alloc),
               byte_string_value(alloc),
@@ -132,7 +132,7 @@ namespace detail {
         {
         }
 
-        parse_event(const string_view_type& value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(const string_view_type& value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::string_value), 
               string_value(value.data(),value.length(),alloc), 
               byte_string_value(alloc),
@@ -140,7 +140,7 @@ namespace detail {
         {
         }
 
-        parse_event(const byte_string_view& value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(const byte_string_view& value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::byte_string_value), 
               string_value(alloc),
               byte_string_value(value.data(),value.size(),alloc), 
@@ -148,7 +148,7 @@ namespace detail {
         {
         }
 
-        parse_event(bool value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(bool value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::bool_value), 
               string_value(alloc),
               byte_string_value(alloc),
@@ -157,7 +157,7 @@ namespace detail {
         {
         }
 
-        parse_event(int64_t value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(int64_t value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::int64_value), 
               string_value(alloc),
               byte_string_value(alloc),
@@ -166,7 +166,7 @@ namespace detail {
         {
         }
 
-        parse_event(uint64_t value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(uint64_t value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::uint64_value), 
               string_value(alloc),
               byte_string_value(alloc),
@@ -175,7 +175,7 @@ namespace detail {
         {
         }
 
-        parse_event(double value, semantic_tag tag, const TempAllocator& alloc)
+        parse_event(double value, semantic_tag tag, const TempAlloc& alloc)
             : event_type(staj_event_type::double_value), 
               string_value(alloc),
               byte_string_value(alloc),
@@ -226,23 +226,23 @@ namespace detail {
         }
     };
 
-    template <typename CharT,typename TempAllocator >
+    template <typename CharT,typename TempAlloc >
     class m_columns_filter : public basic_json_visitor<CharT>
     {
     public:
         using string_view_type = typename basic_json_visitor<CharT>::string_view_type;
         using char_type = CharT;
-        using temp_allocator_type = TempAllocator;
+        using temp_allocator_type = TempAlloc;
 
         using char_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<CharT>;
         using string_type = std::basic_string<CharT,std::char_traits<CharT>,char_allocator_type>;
 
         using string_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<string_type>;
-        using parse_event_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<parse_event<CharT,TempAllocator>>;
-        using parse_event_vector_type = std::vector<parse_event<CharT,TempAllocator>, parse_event_allocator_type>;
+        using parse_event_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<parse_event<CharT,TempAlloc>>;
+        using parse_event_vector_type = std::vector<parse_event<CharT,TempAlloc>, parse_event_allocator_type>;
         using parse_event_vector_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<parse_event_vector_type>;
     private:
-        TempAllocator alloc_;
+        TempAlloc alloc_;
         std::size_t name_index_{0};
         int level_{0};
         int level2_{0};
@@ -254,7 +254,7 @@ namespace detail {
         std::vector<parse_event_vector_type,parse_event_vector_allocator_type> cached_events_;
     public:
 
-        m_columns_filter(const TempAllocator& alloc)
+        m_columns_filter(const TempAlloc& alloc)
             : alloc_(alloc),
               column_names_(alloc),
               cached_events_(alloc)
@@ -532,7 +532,7 @@ namespace detail {
 
 } // namespace detail
 
-template <typename CharT,typename TempAllocator =std::allocator<char>>
+template <typename CharT,typename TempAlloc =std::allocator<char>>
 class basic_csv_parser : public ser_context
 {
 public:
@@ -549,7 +549,7 @@ private:
         }
     };
 
-    using temp_allocator_type = TempAllocator;
+    using temp_allocator_type = TempAlloc;
     typedef typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<CharT> char_allocator_type;
     using string_type = std::basic_string<CharT,std::char_traits<CharT>,char_allocator_type>;
     typedef typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<string_type> string_allocator_type;
@@ -589,7 +589,6 @@ private:
     int level_{0};
     std::size_t depth_{0};
     std::size_t offset_{0};
-    jsoncons::detail::chars_to to_double_; 
     const CharT* begin_input_{nullptr};
     const CharT* input_end_{nullptr};
     const CharT* input_ptr_{nullptr};
@@ -600,7 +599,7 @@ private:
     int mark_level_{0};
     std::size_t header_line_offset_{0};
 
-    detail::m_columns_filter<CharT,TempAllocator> m_columns_filter_;
+    detail::m_columns_filter<CharT,TempAlloc> m_columns_filter_;
     std::vector<csv_mode,csv_mode_allocator_type> stack_;
     std::vector<string_type,string_allocator_type> column_names_;
     std::vector<csv_type_info,csv_type_info_allocator_type> column_types_;
@@ -610,23 +609,77 @@ private:
     std::vector<std::pair<std::basic_string<char_type>,double>> string_double_map_;
 
 public:
-    basic_csv_parser(const TempAllocator& alloc = TempAllocator())
+    basic_csv_parser()
+       : basic_csv_parser(basic_csv_decode_options<CharT>())
+    {
+    }
+
+    explicit basic_csv_parser(const TempAlloc& alloc)
        : basic_csv_parser(basic_csv_decode_options<CharT>(), 
                           default_csv_parsing(),
                           alloc)
     {
     }
 
-    basic_csv_parser(const basic_csv_decode_options<CharT>& options,
-                     const TempAllocator& alloc = TempAllocator())
-        : basic_csv_parser(options, 
-                           default_csv_parsing(),
-                           alloc)
+    explicit basic_csv_parser(const basic_csv_decode_options<CharT>& options)
+        : basic_csv_parser(options, TempAlloc{})
     {
     }
 
+    basic_csv_parser(const basic_csv_decode_options<CharT>& options,
+        const TempAlloc& alloc)
+       : alloc_(alloc),
+         state_(csv_parse_state::start),
+         err_handler_(default_csv_parsing()),
+         assume_header_(options.assume_header()),                  
+         comment_starter_(options.comment_starter()),
+         field_delimiter_(options.field_delimiter()),
+         header_lines_(options.header_lines()),
+         ignore_empty_values_(options.ignore_empty_values()),
+         ignore_empty_lines_(options.ignore_empty_lines()),
+         infer_types_(options.infer_types()),
+         lossless_number_(options.lossless_number()), 
+         mapping_kind_(options.mapping_kind()),
+         max_lines_(options.max_lines()),
+         quote_char_(options.quote_char()),
+         quote_escape_char_(options.quote_escape_char()),
+         subfield_delimiter_(options.subfield_delimiter()),
+         trim_leading_(options.trim_leading()),
+         trim_leading_inside_quotes_(options.trim_leading_inside_quotes()),
+         trim_trailing_(options.trim_trailing()),
+         trim_trailing_inside_quotes_(options.trim_trailing_inside_quotes()),
+         unquoted_empty_value_is_null_(options.unquoted_empty_value_is_null()),
+         m_columns_filter_(alloc),
+         stack_(alloc),
+         column_names_(alloc),
+         column_types_(alloc),
+         column_defaults_(alloc),
+         state_stack_(alloc),
+         buffer_(alloc)
+    {
+        if (options.enable_str_to_nan())
+        {
+            string_double_map_.emplace_back(options.nan_to_str(),std::nan(""));
+        }
+        if (options.enable_str_to_inf())
+        {
+            string_double_map_.emplace_back(options.inf_to_str(),std::numeric_limits<double>::infinity());
+        }
+        if (options.enable_str_to_neginf())
+        {
+            string_double_map_.emplace_back(options.neginf_to_str(),-std::numeric_limits<double>::infinity());
+        }
+
+        jsoncons::csv::detail::parse_column_types(options.column_types(), column_types_);
+        jsoncons::csv::detail::parse_column_names(options.column_defaults(), column_defaults_);
+        jsoncons::csv::detail::parse_column_names(options.column_names(), column_names_);
+        min_column_names_ = column_names_.size();
+        initialize();
+    }
+
+#if !defined(JSONCONS_NO_DEPRECATED)
     basic_csv_parser(std::function<bool(csv_errc,const ser_context&)> err_handler,
-                     const TempAllocator& alloc = TempAllocator())
+                     const TempAlloc& alloc = TempAlloc())
         : basic_csv_parser(basic_csv_decode_options<CharT>(), 
                            err_handler,
                            alloc)
@@ -635,7 +688,7 @@ public:
 
     basic_csv_parser(const basic_csv_decode_options<CharT>& options,
                      std::function<bool(csv_errc,const ser_context&)> err_handler,
-                     const TempAllocator& alloc = TempAllocator())
+                     const TempAlloc& alloc = TempAlloc())
        : alloc_(alloc),
          state_(csv_parse_state::start),
          err_handler_(err_handler),
@@ -684,6 +737,7 @@ public:
         min_column_names_ = column_names_.size();
         initialize();
     }
+#endif
 
     ~basic_csv_parser() noexcept
     {
@@ -1707,7 +1761,7 @@ private:
                 switch (mapping_kind_)
                 {
                 case csv_mapping_kind::n_rows:
-                    if (unquoted_empty_value_is_null_ && buffer_.length() == 0)
+                    if (unquoted_empty_value_is_null_ && buffer_.empty())
                     {
                         visitor.null_value(semantic_tag::none, *this, ec);
                         more_ = !cursor_mode_;
@@ -1722,7 +1776,7 @@ private:
                     {
                         if (column_index_ < column_names_.size() + offset_)
                         {
-                            if (unquoted_empty_value_is_null_ && buffer_.length() == 0)
+                            if (unquoted_empty_value_is_null_ && buffer_.empty())
                             {
                                 visitor.null_value(semantic_tag::none, *this, ec);
                                 more_ = !cursor_mode_;
@@ -1734,7 +1788,7 @@ private:
                         }
                         else if (depth_ > 0)
                         {
-                            if (unquoted_empty_value_is_null_ && buffer_.length() == 0)
+                            if (unquoted_empty_value_is_null_ && buffer_.empty())
                             {
                                 visitor.null_value(semantic_tag::none, *this, ec);
                                 more_ = !cursor_mode_;
@@ -1784,7 +1838,7 @@ private:
                     {
                         if (column_index_ < column_names_.size() + offset_)
                         {
-                            if (unquoted_empty_value_is_null_ && buffer_.length() == 0)
+                            if (unquoted_empty_value_is_null_ && buffer_.empty())
                             {
                                 visitor.null_value(semantic_tag::none, *this, ec);
                                 more_ = !cursor_mode_;
@@ -1796,7 +1850,7 @@ private:
                         }
                         else if (depth_ > 0)
                         {
-                            if (unquoted_empty_value_is_null_ && buffer_.length() == 0)
+                            if (unquoted_empty_value_is_null_ && buffer_.empty())
                             {
                                 visitor.null_value(semantic_tag::none, *this, ec);
                                 more_ = !cursor_mode_;
@@ -2112,9 +2166,11 @@ private:
                 {
                     switch (*p)
                     {
-                    case '.':
-                        buffer.push_back(to_double_.get_decimal_point());
-                        state = numeric_check_state::fraction1;
+                        case '.':
+                        {
+                            buffer.push_back('.');
+                            state = numeric_check_state::fraction1;
+                        }
                         break;
                     case 'e':case 'E':
                         buffer.push_back(*p);
@@ -2135,7 +2191,7 @@ private:
                         buffer.push_back(*p);
                         break;
                     case '.':
-                        buffer.push_back(to_double_.get_decimal_point());
+                        buffer.push_back('.');
                         state = numeric_check_state::fraction1;
                         break;
                     case 'e':case 'E':
@@ -2260,7 +2316,7 @@ private:
                 if (is_negative)
                 {
                     int64_t val{ 0 };
-                    auto result = jsoncons::detail::dec_to_integer(buffer_.data(), buffer_.length(), val);
+                    auto result = jsoncons::dec_to_integer(buffer_.data(), buffer_.length(), val);
                     if (result)
                     {
                         visitor.int64_value(val, semantic_tag::none, *this, ec);
@@ -2275,20 +2331,20 @@ private:
                 else
                 {
                     uint64_t val{ 0 };
-                    auto result = jsoncons::detail::dec_to_integer(buffer_.data(), buffer_.length(), val);
+                    auto result = jsoncons::dec_to_integer(buffer_.data(), buffer_.length(), val);
                     if (result)
                     {
                         visitor.uint64_value(val, semantic_tag::none, *this, ec);
                         more_ = !cursor_mode_;
                     }
-                    else if (result.ec == jsoncons::detail::to_integer_errc::overflow)
+                    else if (result.ec == std::errc::result_out_of_range)
                     {
                         visitor.string_value(buffer_, semantic_tag::bigint, *this, ec);
                         more_ = !cursor_mode_;
                     }
                     else
                     {
-                        ec = result.ec;
+                        ec = csv_errc::invalid_number; 
                         more_ = false;
                         return;
                     }
@@ -2305,7 +2361,18 @@ private:
                 }
                 else
                 {
-                    double d = to_double_(buffer.c_str(), buffer.length());
+                    double d{0};
+                    auto result = jsoncons::decstr_to_double(buffer.c_str(), buffer.length(), d);
+                    if (result.ec == std::errc::result_out_of_range)
+                    {
+                        d = buffer.front() == '-' ? -HUGE_VAL : HUGE_VAL;
+                    }
+                    else if (result.ec == std::errc::invalid_argument)
+                    {
+                        ec = csv_errc::invalid_number; 
+                        more_ = false;
+                        return;
+                    }
                     visitor.double_value(d, semantic_tag::none, *this, ec);
                     more_ = !cursor_mode_;
                 }

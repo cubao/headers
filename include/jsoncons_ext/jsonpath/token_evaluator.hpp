@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -21,7 +21,7 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/config/jsoncons_config.hpp>
-#include <jsoncons/detail/parse_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/semantic_tag.hpp>
 #include <jsoncons/utility/more_type_traits.hpp>
@@ -158,7 +158,11 @@ namespace jsonpath {
     };
     JSONCONS_INLINE_CONSTEXPR argument_arg_t argument_arg{};
 
-    enum class result_options {value=0, nodups=1, sort=2, sort_descending=4, path=8};
+    enum class result_options {
+#if !defined(JSONCONS_NO_DEPRECATED)
+        value=0, 
+#endif
+        nodups=1, sort=2, sort_descending=4, path=8};
 
     inline constexpr result_options operator~(result_options a)
     {
@@ -1138,7 +1142,7 @@ namespace detail {
 
             switch (arg0.type())
             {
-                case json_type::array_value:
+                case json_type::array:
                     for (auto& j : arg0.array_range())
                     {
                         if (j == arg1)
@@ -1147,7 +1151,7 @@ namespace detail {
                         }
                     }
                     return value_type(false, semantic_tag::none);
-                case json_type::string_value:
+                case json_type::string:
                 {
                     if (!arg1.is_string())
                     {
@@ -1451,12 +1455,12 @@ namespace detail {
             auto arg0= args[0].value();
             switch (arg0.type())
             {
-                case json_type::uint64_value:
-                case json_type::int64_value:
+                case json_type::uint64:
+                case json_type::int64:
                 {
                     return value_type(arg0.template as<double>(), semantic_tag::none);
                 }
-                case json_type::double_value:
+                case json_type::float64:
                 {
                     return value_type(std::ceil(arg0.template as<double>()), semantic_tag::none);
                 }
@@ -1503,12 +1507,12 @@ namespace detail {
             auto arg0= args[0].value();
             switch (arg0.type())
             {
-                case json_type::uint64_value:
-                case json_type::int64_value:
+                case json_type::uint64:
+                case json_type::int64:
                 {
                     return value_type(arg0.template as<double>(), semantic_tag::none);
                 }
-                case json_type::double_value:
+                case json_type::float64:
                 {
                     return value_type(std::floor(arg0.template as<double>()), semantic_tag::none);
                 }
@@ -1555,36 +1559,33 @@ namespace detail {
             auto arg0= args[0].value();
             switch (arg0.type())
             {
-                case json_type::int64_value:
-                case json_type::uint64_value:
-                case json_type::double_value:
+                case json_type::int64:
+                case json_type::uint64:
+                case json_type::float64:
                     return arg0;
-                case json_type::string_value:
+                case json_type::string:
                 {
                     auto sv = arg0.as_string_view();
                     uint64_t un{0};
-                    auto result1 = jsoncons::detail::to_integer(sv.data(), sv.length(), un);
+                    auto result1 = jsoncons::to_integer(sv.data(), sv.length(), un);
                     if (result1)
                     {
                         return value_type(un, semantic_tag::none);
                     }
                     int64_t sn{0};
-                    auto result2 = jsoncons::detail::to_integer(sv.data(), sv.length(), sn);
+                    auto result2 = jsoncons::to_integer(sv.data(), sv.length(), sn);
                     if (result2)
                     {
                         return value_type(sn, semantic_tag::none);
                     }
-                    const jsoncons::detail::chars_to to_double;
-                    try
-                    {
-                        auto s = arg0.as_string();
-                        double d = to_double(s.c_str(), s.length());
-                        return value_type(d, semantic_tag::none);
-                    }
-                    catch (const std::exception&)
+                    auto s = arg0.as_string();
+                    double d;
+                    auto result = jsoncons::decstr_to_double(s.c_str(), s.length(), d);
+                    if (result.ec == std::errc::invalid_argument)
                     {
                         return value_type::null();
                     }
+                    return value_type(d, semantic_tag::none);
                 }
                 default:
                     ec = jsonpath_errc::invalid_type;
@@ -1883,13 +1884,13 @@ namespace detail {
             auto arg0= args[0].value();
             switch (arg0.type())
             {
-                case json_type::uint64_value:
+                case json_type::uint64:
                     return arg0;
-                case json_type::int64_value:
+                case json_type::int64:
                 {
                     return arg0.template as<int64_t>() >= 0 ? arg0 : value_type(std::abs(arg0.template as<int64_t>()), semantic_tag::none);
                 }
-                case json_type::double_value:
+                case json_type::float64:
                 {
                     return arg0.template as<double>() >= 0 ? arg0 : value_type(std::abs(arg0.template as<double>()), semantic_tag::none);
                 }
@@ -1941,11 +1942,11 @@ namespace detail {
 
             switch (arg0.type())
             {
-                case json_type::object_value:
-                case json_type::array_value:
+                case json_type::object:
+                case json_type::array:
                     //std::cout << "LENGTH ARG: " << arg0 << "\n";
                     return value_type(arg0.size(), semantic_tag::none);
-                case json_type::string_value:
+                case json_type::string:
                 {
                     auto sv0 = arg0.template as<string_view_type>();
                     auto length = unicode_traits::count_codepoints(sv0.data(), sv0.size());

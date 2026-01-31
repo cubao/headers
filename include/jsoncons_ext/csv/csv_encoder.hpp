@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -10,13 +10,12 @@
 #include <array> // std::array
 #include <limits> // std::numeric_limits
 #include <memory> // std::allocator
-#include <ostream>
 #include <string>
 #include <unordered_map> // std::unordered_map
 #include <utility> // std::move
 #include <vector>
 
-#include <jsoncons/detail/write_number.hpp>
+#include <jsoncons/utility/write_number.hpp>
 #include <jsoncons/json_encoder.hpp>
 #include <jsoncons/json_exception.hpp>
 #include <jsoncons/json_visitor.hpp>
@@ -44,17 +43,17 @@ public:
     using column_type = std::vector<string_type, string_allocator_type>;
     using column_path_column_map_type = std::unordered_map<string_type, column_type, std::hash<string_type>,std::equal_to<string_type>,string_vector_allocator_type>;
 private:
-    static jsoncons::basic_string_view<CharT> null_constant()
+    static jsoncons::basic_string_view<CharT> null_literal()
     {
         static jsoncons::basic_string_view<CharT> k = JSONCONS_STRING_VIEW_CONSTANT(CharT,"null");
         return k;
     }
-    static jsoncons::basic_string_view<CharT> true_constant()
+    static jsoncons::basic_string_view<CharT> true_literal()
     {
         static jsoncons::basic_string_view<CharT> k = JSONCONS_STRING_VIEW_CONSTANT(CharT,"true");
         return k;
     }
-    static jsoncons::basic_string_view<CharT> false_constant()
+    static jsoncons::basic_string_view<CharT> false_literal()
     {
         static jsoncons::basic_string_view<CharT> k = JSONCONS_STRING_VIEW_CONSTANT(CharT,"false");
         return k;
@@ -128,7 +127,7 @@ private:
     allocator_type alloc_;
 
     std::vector<stack_item, stack_item_allocator_type> stack_;
-    jsoncons::detail::write_double fp_;
+    jsoncons::write_double fp_;
 
     std::vector<string_type,string_allocator_type> column_names_;
     std::vector<string_type,string_allocator_type> column_paths_;
@@ -517,7 +516,7 @@ private:
                 {
                     string_type str{alloc_};
                     str.push_back('/');
-                    jsoncons::detail::from_integer(index, str);
+                    jsoncons::from_integer(index, str);
                     column_paths_.emplace_back(str);
                     column_path_value_map_.emplace(str, string_type{alloc_});
                     column_path_name_map_.emplace(std::move(str), item);
@@ -803,7 +802,7 @@ private:
     {
         stack_.back().column_path_ = parent(stack_).column_path_;
         stack_.back().column_path_.push_back('/');
-        jsoncons::detail::from_integer(stack_.back().count_, stack_.back().column_path_);
+        jsoncons::from_integer(stack_.back().count_, stack_.back().column_path_);
         if (stack_[0].count_ == 0)
         {
             if (!has_column_mapping_)
@@ -990,19 +989,19 @@ private:
         {
             case byte_string_chars_format::base16:
             {
-                encode_base16(b.begin(),b.end(),s);
+                bytes_to_base16(b.begin(),b.end(),s);
                 visit_string(s, semantic_tag::none, context, ec);
                 break;
             }
             case byte_string_chars_format::base64:
             {
-                encode_base64(b.begin(),b.end(),s);
+                bytes_to_base64(b.begin(),b.end(),s);
                 visit_string(s, semantic_tag::none, context, ec);
                 break;
             }
             case byte_string_chars_format::base64url:
             {
-                encode_base64url(b.begin(),b.end(),s);
+                bytes_to_base64url(b.begin(),b.end(),s);
                 visit_string(s, semantic_tag::none, context, ec);
                 break;
             }
@@ -1344,7 +1343,7 @@ private:
                 }
                 else
                 {
-                    str.append(null_constant().data(), null_constant().size());
+                    str.append(null_literal().data(), null_literal().size());
                 }
             }
             else if (val == std::numeric_limits<double>::infinity())
@@ -1359,7 +1358,7 @@ private:
                 }
                 else
                 {
-                    str.append(null_constant().data(), null_constant().size());
+                    str.append(null_literal().data(), null_literal().size());
                 }
             }
             else
@@ -1374,7 +1373,7 @@ private:
                 }
                 else
                 {
-                    str.append(null_constant().data(), null_constant().size());
+                    str.append(null_literal().data(), null_literal().size());
                 }
             }
         }
@@ -1386,29 +1385,29 @@ private:
 
     void write_int64_value(int64_t val, string_type& str)
     {
-        jsoncons::detail::from_integer(val,str);
+        jsoncons::from_integer(val,str);
     }
 
     void write_uint64_value(uint64_t val, string_type& str)
     {
-        jsoncons::detail::from_integer(val,str);
+        jsoncons::from_integer(val,str);
     }
 
     void write_bool_value(bool val, string_type& str) 
     {
         if (val)
         {
-            str.append(true_constant().data(), true_constant().size());
+            str.append(true_literal().data(), true_literal().size());
         }
         else
         {
-            str.append(false_constant().data(), false_constant().size());
+            str.append(false_literal().data(), false_literal().size());
         }
     }
  
     void write_null_value(string_type& str) 
     {
-        str.append(null_constant().data(), null_constant().size());
+        str.append(null_literal().data(), null_literal().size());
     }
 };
 

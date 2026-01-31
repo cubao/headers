@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -8,7 +8,6 @@
 #define JSONCONS_EXT_JSONSCHEMA_DRAFT202012_SCHEMA_VALIDATOR_FACTORY_202012_HPP
 
 #include <cassert>
-#include <iostream>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -205,7 +204,7 @@ namespace draft202012 {
 
             switch (sch.type())
             {
-                case json_type::bool_value:
+                case json_type::boolean:
                 {
                     schema_validator_ptr = this->make_boolean_schema(new_context, sch);
                     schema_validator<Json>* p = schema_validator_ptr.get();
@@ -215,7 +214,7 @@ namespace draft202012 {
                     }          
                     break;
                 }
-                case json_type::object_value:
+                case json_type::object:
                 {
                     schema_validator_ptr = make_object_schema_validator(new_context, sch, anchor_dict);
                     schema_validator<Json>* p = schema_validator_ptr.get();
@@ -245,7 +244,7 @@ namespace draft202012 {
             const Json& sch, anchor_uri_map_type& anchor_dict)
         {
             jsoncons::optional<jsoncons::uri> id = context.id();
-            Json default_value{jsoncons::null_type()};
+            jsoncons::optional<Json> default_value;
             std::vector<keyword_validator_ptr_type> validators;
             std::unique_ptr<unevaluated_properties_validator<Json>> unevaluated_properties_val;
             std::unique_ptr<unevaluated_items_validator<Json>> unevaluated_items_val;
@@ -396,7 +395,7 @@ namespace draft202012 {
                 if (it != sch.object_range().end()) 
                 {
 
-                    if ((*it).value().type() == json_type::array_value) 
+                    if ((*it).value().type() == json_type::array) 
                     {
                         validators.emplace_back(factory_.make_prefix_items_validator(context, (*it).value(), sch, local_anchor_dict));
                     } 
@@ -406,7 +405,7 @@ namespace draft202012 {
                     it = sch.find("items");
                     if (it != sch.object_range().end()) 
                     {
-                        if ((*it).value().type() == json_type::object_value || (*it).value().type() == json_type::bool_value)
+                        if ((*it).value().type() == json_type::object || (*it).value().type() == json_type::boolean)
                         {
                             validators.emplace_back(factory_.make_items_validator("items", context, (*it).value(), sch, local_anchor_dict));
                         }

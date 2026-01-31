@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -11,6 +11,25 @@
 #include <cstdint>
 #include <cstring> // std::memcpy
 #include <limits> // std::numeric_limits
+
+#if (!defined(JSONCONS_NO_EXCEPTIONS))
+// Check if exceptions are disabled.
+#  if defined( __cpp_exceptions) && __cpp_exceptions == 0
+#   define JSONCONS_NO_EXCEPTIONS 1
+#  endif
+#endif
+
+#if !defined(JSONCONS_NO_EXCEPTIONS)
+#if defined(__GNUC__) && !defined(__EXCEPTIONS)
+# define JSONCONS_NO_EXCEPTIONS 1
+#elif defined(_MSC_VER)
+#if defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
+# define JSONCONS_NO_EXCEPTIONS 1
+#elif !defined(_CPPUNWIND)
+# define JSONCONS_NO_EXCEPTIONS 1
+#endif
+#endif
+#endif
 
 #if !defined(JSONCONS_NO_EXCEPTIONS)
     #define JSONCONS_THROW(exception) throw exception
@@ -129,6 +148,23 @@
    #endif
 #endif
 
+#if !defined(JSONCONS_HAS_STD_FROM_CHARS)
+#  if defined(__GNUC__)
+#   if (__GNUC__ >= 11)
+#    if (__cplusplus >= 201703)
+#     if !defined(__MINGW32__)
+#      define JSONCONS_HAS_STD_FROM_CHARS 1
+#     endif // !defined(__MINGW32__)
+#    endif // (__cplusplus >= 201703)
+#   endif // (__GNUC__ >= 11)
+#  endif // defined(__GNUC__)
+#  if defined(_MSC_VER)
+#   if (_MSC_VER >= 1924 && _MSVC_LANG >= 201703)
+#    define JSONCONS_HAS_STD_FROM_CHARS 1
+#   endif // (_MSC_VER >= 1924 && MSVC_LANG >= 201703)
+#  endif // defined(_MSC_VER)
+#endif
+
 #if defined(JSONCONS_HAS_STD_FROM_CHARS) && JSONCONS_HAS_STD_FROM_CHARS
 #include <charconv>
 #endif
@@ -229,26 +265,6 @@
 #  endif // defined(JSONCONS_HAS_2017)
 #endif // !defined(JSONCONS_HAS_FILESYSTEM)
 
-#if (!defined(JSONCONS_NO_EXCEPTIONS))
-// Check if exceptions are disabled.
-#  if defined( __cpp_exceptions) && __cpp_exceptions == 0
-#   define JSONCONS_NO_EXCEPTIONS 1
-#  endif
-#endif
-
-#if !defined(JSONCONS_NO_EXCEPTIONS)
-
-#if defined(__GNUC__) && !defined(__EXCEPTIONS)
-# define JSONCONS_NO_EXCEPTIONS 1
-#elif defined(_MSC_VER)
-#if defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
-# define JSONCONS_NO_EXCEPTIONS 1
-#elif !defined(_CPPUNWIND)
-# define JSONCONS_NO_EXCEPTIONS 1
-#endif
-#endif
-#endif
-
 #if !defined(JSONCONS_HAS_STD_MAKE_UNIQUE)
    #if defined(__clang__) && defined(__cplusplus)
       #if defined(__APPLE__)
@@ -291,19 +307,24 @@
 
 // gcc and clang
 #if !defined(__CUDA_ARCH__)
+
 #if (defined(__clang__) || defined(__GNUC__)) && defined(__cplusplus)
+
 #if defined(__SIZEOF_INT128__) && !defined(_MSC_VER)
 #  define JSONCONS_HAS_INT128
 #endif
 
 #if (defined(linux) || defined(__linux) || defined(__linux__) || defined(__GNU__) || defined(__GLIBC__)) && !defined(_CRAYC)
+#if defined(__clang__) 
 #if (__clang_major__ >= 4) && defined(__has_include)
 #if __has_include(<quadmath.h>)
 #  define JSONCONS_HAS_FLOAT128
 #endif
 #endif
 #endif
-#endif
+#endif 
+
+#endif // (__clang__ || __GNUC__) && __cplusplus
 
 #if defined(__GNUC__)
 #if defined(_GLIBCXX_USE_FLOAT128)
@@ -320,6 +341,7 @@
 #endif
 #endif
 #endif
+
 #endif // __CUDA_ARCH__
 
 #ifndef JSONCONS_FORCE_INLINE
@@ -366,30 +388,6 @@
 #       define JSONCONS_HAS_INCLUDE(x) __has_include(x)
 #   else
 #       define JSONCONS_HAS_INCLUDE(x) 0
-#   endif
-#endif
-
-/** noinline for compiler */
-#ifndef JSONCONS_NOINLINE
-#   if YYJSON_MSC_VER >= 1400
-#       define JSONCONS_NOINLINE __declspec(noinline)
-#   elif JSONCONS_HAS_ATTRIBUTE(noinline) || YYJSON_GCC_VER >= 4
-#       define JSONCONS_NOINLINE __attribute__((noinline))
-#   else
-#       define JSONCONS_NOINLINE
-#   endif
-#endif
-
-/** align for compiler */
-#ifndef JSONCONS_ALIGN
-#   if YYJSON_MSC_VER >= 1300
-#       define JSONCONS_ALIGN(x) __declspec(align(x))
-#   elif JSONCONS_HAS_ATTRIBUTE(aligned) || defined(__GNUC__)
-#       define JSONCONS_ALIGN(x) __attribute__((aligned(x)))
-#   elif YYJSON_CPP_VER >= 201103L
-#       define JSONCONS_ALIGN(x) alignas(x)
-#   else
-#       define JSONCONS_ALIGN(x)
 #   endif
 #endif
 
@@ -559,5 +557,17 @@ namespace binary {
 } // namespace binary
 } // namespace jsoncons
 // allow to disable exceptions
+
+#if defined(JSONCONS_HAS_2017)
+#  define JSONCONS_FALLTHROUGH [[fallthrough]]
+#elif defined(__clang__)
+#  define JSONCONS_FALLTHROUGH [[clang::fallthrough]]
+#elif defined(__GNUC__) && ((__GNUC__ >= 7))
+#  define JSONCONS_FALLTHROUGH __attribute__((fallthrough))
+#elif defined (__GNUC__)
+#  define JSONCONS_FALLTHROUGH // FALLTHRU
+#else
+#  define JSONCONS_FALLTHROUGH
+#endif
 
 #endif // JSONCONS_CONFIG_COMPILER_SUPPORT_HPP

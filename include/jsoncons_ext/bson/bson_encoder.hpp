@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -22,7 +22,7 @@
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/sink.hpp>
 #include <jsoncons/utility/binary.hpp>
 #include <jsoncons/utility/byte_string.hpp>
@@ -92,7 +92,7 @@ private:
     };
 
     sink_type sink_;
-    const bson_encode_options options_;
+    int max_nesting_depth_;
     allocator_type alloc_;
 
     std::vector<stack_item> stack_;
@@ -116,7 +116,7 @@ public:
                                 const bson_encode_options& options, 
                                 const Allocator& alloc = Allocator())
        : sink_(std::forward<Sink>(sink)),
-         options_(options),
+         max_nesting_depth_(options.max_nesting_depth()),
          alloc_(alloc)
     {
     }
@@ -152,7 +152,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_object(semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = bson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;
@@ -196,7 +196,7 @@ private:
 
     JSONCONS_VISITOR_RETURN_TYPE visit_begin_array(semantic_tag, const ser_context&, std::error_code& ec) override
     {
-        if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(++nesting_depth_ > max_nesting_depth_))
         {
             ec = bson_errc::max_nesting_depth_exceeded;
             JSONCONS_VISITOR_RETURN;
@@ -302,7 +302,7 @@ private:
                 before_value(jsoncons::bson::bson_type::decimal128_type);
                 decimal128_t dec;
                 auto rc = decimal128_from_chars(sv.data(), sv.data()+sv.size(), dec);
-                if (rc.ec != std::errc())
+                if (rc.ec != std::errc{})
                 {
                     ec = bson_errc::invalid_decimal128_string;
                     JSONCONS_VISITOR_RETURN;

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,7 +15,7 @@
 
 #include <jsoncons/config/compiler_support.hpp>
 #include <jsoncons/json_error.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 
 namespace jsoncons {
 
@@ -23,7 +23,7 @@ enum class float_chars_format : uint8_t {general,fixed,scientific,hex};
 
 enum class indenting : uint8_t {no_indent = 0, indent = 1};
 
-enum class line_split_kind  : uint8_t {same_line=1, new_line, multi_line};
+enum class line_split_kind  : uint8_t {multi_line=0, new_line=1, same_line=2};
 
 enum class bignum_format_kind : uint8_t {raw, 
 #if !defined(JSONCONS_NO_DEPRECATED)
@@ -50,6 +50,8 @@ struct default_json_parsing
     }
 };
 
+#if !defined(JSONCONS_NO_DEPRECATED)
+
 struct strict_json_parsing
 {
     bool operator()(json_errc, const ser_context&) noexcept
@@ -65,6 +67,8 @@ struct allow_trailing_commas
         return ec == json_errc::illegal_comment || ec == jsoncons::json_errc::extra_comma;
     }
 };
+
+#endif
 
 template <typename CharT>
 class basic_json_options;
@@ -253,6 +257,7 @@ public:
     using typename super_type::string_type;
 private:
     bool lossless_number_{false};
+    bool lossless_bignum_{true};
     bool allow_comments_{true};
     bool allow_trailing_comma_{false};
     std::function<bool(json_errc,const ser_context&)> err_handler_;
@@ -267,6 +272,7 @@ public:
     basic_json_decode_options(basic_json_decode_options&& other) noexcept
         : super_type(std::move(other)), 
           lossless_number_(other.lossless_number_), 
+          lossless_bignum_(other.lossless_bignum_), 
           allow_comments_(other.allow_comments_), 
           allow_trailing_comma_(other.allow_trailing_comma_), 
           err_handler_(std::move(other.err_handler_))
@@ -280,6 +286,10 @@ public:
     {
         return lossless_number_;
     }
+    bool lossless_bignum() const 
+    {
+        return lossless_bignum_;
+    }
 
     bool allow_comments() const 
     {
@@ -291,11 +301,12 @@ public:
         return allow_trailing_comma_;
     }
 
+#if !defined(JSONCONS_NO_DEPRECATED)
     const std::function<bool(json_errc,const ser_context&)>& err_handler() const 
     {
         return err_handler_;
     }
-
+#endif
 };
 
 template <typename CharT>
@@ -317,7 +328,7 @@ private:
     float_chars_format float_format_;
     byte_string_chars_format byte_string_format_;
     bignum_format_kind bignum_format_;
-    line_split_kind line_splits_;
+    line_split_kind root_line_splits_;
     line_split_kind object_object_line_splits_;
     line_split_kind object_array_line_splits_;
     line_split_kind array_array_line_splits_;
@@ -328,6 +339,7 @@ private:
     uint8_t indent_size_{indent_size_default};
     std::size_t line_length_limit_{line_length_limit_default};
     string_type new_line_chars_;
+    char_type indent_char_;
 public:
     basic_json_encode_options()
         : escape_all_non_ascii_(false),
@@ -337,13 +349,14 @@ public:
           float_format_(float_chars_format::general),
           byte_string_format_(byte_string_chars_format::none),
           bignum_format_(bignum_format_kind::raw),
-          line_splits_(line_split_kind::multi_line),
-          object_object_line_splits_(line_split_kind{}),
-          object_array_line_splits_(line_split_kind{}),
-          array_array_line_splits_(line_split_kind{}),
-          array_object_line_splits_(line_split_kind{}),
+          root_line_splits_(line_split_kind::multi_line),
+          object_object_line_splits_(line_split_kind::multi_line),
+          object_array_line_splits_(line_split_kind::multi_line),
+          array_array_line_splits_(line_split_kind::multi_line),
+          array_object_line_splits_(line_split_kind::multi_line),
           spaces_around_colon_(spaces_option::space_after),
-          spaces_around_comma_(spaces_option::space_after)
+          spaces_around_comma_(spaces_option::space_after),
+          indent_char_(' ')
     {
         new_line_chars_.push_back('\n');
     }
@@ -359,7 +372,7 @@ public:
           float_format_(other.float_format_),
           byte_string_format_(other.byte_string_format_),
           bignum_format_(other.bignum_format_),
-          line_splits_(other.line_splits_),
+          root_line_splits_(other.root_line_splits_),
           object_object_line_splits_(other.object_object_line_splits_),
           object_array_line_splits_(other.object_array_line_splits_),
           array_array_line_splits_(other.array_array_line_splits_),
@@ -369,7 +382,8 @@ public:
           precision_(other.precision_),
           indent_size_(other.indent_size_),
           line_length_limit_(other.line_length_limit_),
-          new_line_chars_(std::move(other.new_line_chars_))
+          new_line_chars_(std::move(other.new_line_chars_)),
+          indent_char_(other.indent_char_)
     {
     }
     
@@ -380,7 +394,6 @@ protected:
 public:
     byte_string_chars_format byte_string_format() const  {return byte_string_format_;}
 
-
 #if !defined(JSONCONS_NO_DEPRECATED)
     JSONCONS_DEPRECATED_MSG("Instead, use bignum_format")
     bignum_format_kind bigint_format() const  {return bignum_format_;}
@@ -388,15 +401,19 @@ public:
 
     bignum_format_kind bignum_format() const  {return bignum_format_;}
 
-    line_split_kind line_splits() const  {return line_splits_;}
+#if !defined(JSONCONS_NO_DEPRECATED)
+    line_split_kind line_splits() const  {return root_line_splits_;}
+#endif    
 
-    line_split_kind object_object_line_splits() const  {return object_object_line_splits_ == line_split_kind{} ? line_splits_ : object_object_line_splits_;}
+    line_split_kind root_line_splits() const  {return root_line_splits_;}
 
-    line_split_kind array_object_line_splits() const  {return array_object_line_splits_ == line_split_kind{} ? line_splits_ : array_object_line_splits_;}
+    line_split_kind object_object_line_splits() const  {return object_object_line_splits_;}
 
-    line_split_kind object_array_line_splits() const  {return object_array_line_splits_ == line_split_kind{} ? line_splits_ : object_array_line_splits_;}
+    line_split_kind array_object_line_splits() const  {return array_object_line_splits_;}
 
-    line_split_kind array_array_line_splits() const  {return array_array_line_splits_ == line_split_kind{} ? line_splits_ : array_array_line_splits_;}
+    line_split_kind object_array_line_splits() const  {return object_array_line_splits_;}
+
+    line_split_kind array_array_line_splits() const  {return array_array_line_splits_;}
 
     uint8_t indent_size() const 
     {
@@ -411,6 +428,11 @@ public:
     spaces_option spaces_around_comma() const 
     {
         return spaces_around_comma_;
+    }
+
+    char_type indent_char() const 
+    {
+        return indent_char_;
     }
 
     bool pad_inside_object_braces() const 
@@ -476,13 +498,19 @@ public:
     using basic_json_decode_options<CharT>::neginf_to_num;
 
     using basic_json_decode_options<CharT>::lossless_number;
+    using basic_json_decode_options<CharT>::lossless_bignum;
     using basic_json_decode_options<CharT>::allow_comments;
     using basic_json_decode_options<CharT>::allow_trailing_comma;
+#if !defined(JSONCONS_NO_DEPRECATED)
     using basic_json_decode_options<CharT>::err_handler;
-
+#endif
     using basic_json_encode_options<CharT>::byte_string_format;
     using basic_json_encode_options<CharT>::bignum_format;
+
+#if !defined(JSONCONS_NO_DEPRECATED)
     using basic_json_encode_options<CharT>::line_splits;
+#endif
+    using basic_json_encode_options<CharT>::root_line_splits;
     using basic_json_encode_options<CharT>::object_object_line_splits;
     using basic_json_encode_options<CharT>::array_object_line_splits;
     using basic_json_encode_options<CharT>::object_array_line_splits;
@@ -564,12 +592,16 @@ public:
 
 #if !defined(JSONCONS_NO_DEPRECATED)
     JSONCONS_DEPRECATED_MSG("Instead, use bignum_format")
-    basic_json_options&  bigint_format(bignum_format_kind value) {this->bignum_format_ = value; return *this;}
+    basic_json_options& bigint_format(bignum_format_kind value) {this->bignum_format_ = value; return *this;}
 #endif    
 
-    basic_json_options&  bignum_format(bignum_format_kind value) {this->bignum_format_ = value; return *this;}
+    basic_json_options& bignum_format(bignum_format_kind value) {this->bignum_format_ = value; return *this;}
 
-    basic_json_options& line_splits(line_split_kind value) {this->line_splits_ = value; return *this;}
+#if !defined(JSONCONS_NO_DEPRECATED)
+    basic_json_options& line_splits(line_split_kind value) {this->root_line_splits_ = value; return *this;}
+#endif    
+
+    basic_json_options& root_line_splits(line_split_kind value) {this->root_line_splits_ = value; return *this;}
 
     basic_json_options& object_object_line_splits(line_split_kind value) {this->object_object_line_splits_ = value; return *this;}
 
@@ -597,6 +629,12 @@ public:
         return *this;
     }
 
+    basic_json_options& indent_char(char_type value)
+    {
+        this->indent_char_ = value;
+        return *this;
+    }
+
     basic_json_options& pad_inside_object_braces(bool value)
     {
         this->pad_inside_object_braces_ = value;
@@ -621,6 +659,12 @@ public:
         return *this;
     }
 
+    basic_json_options& lossless_bignum(bool value) 
+    {
+        this->lossless_bignum_ = value;
+        return *this;
+    }
+
     basic_json_options& allow_comments(bool value) 
     {
         this->allow_comments_ = value;
@@ -633,12 +677,13 @@ public:
         return *this;
     }
 
+#if !defined(JSONCONS_NO_DEPRECATED)
     basic_json_options& err_handler(const std::function<bool(json_errc,const ser_context&)>& value) 
     {
         this->err_handler_ = value;
         return *this;
     }
-
+#endif
     basic_json_options& line_length_limit(std::size_t value)
     {
         this->line_length_limit_ = value;

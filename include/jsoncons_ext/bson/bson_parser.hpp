@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,7 +20,7 @@
 #include <jsoncons/json_type.hpp>
 #include <jsoncons/json_visitor.hpp>
 #include <jsoncons/semantic_tag.hpp>
-#include <jsoncons/ser_context.hpp>
+#include <jsoncons/ser_util.hpp>
 #include <jsoncons/source.hpp>
 #include <jsoncons/utility/binary.hpp>
 #include <jsoncons/utility/unicode_traits.hpp>
@@ -55,12 +55,12 @@ struct parse_state
     parse_state& operator=(parse_state&&) = default;
 };
 
-template <typename Source,typename TempAllocator =std::allocator<char>>
+template <typename Source,typename TempAlloc =std::allocator<char>>
 class basic_bson_parser : public ser_context
 {
     using char_type = char;
     using char_traits_type = std::char_traits<char>;
-    using temp_allocator_type = TempAllocator;
+    using temp_allocator_type = TempAlloc;
     using char_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<char_type>;                  
     using byte_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<uint8_t>;                  
     using parse_state_allocator_type = typename std::allocator_traits<temp_allocator_type>:: template rebind_alloc<parse_state>;
@@ -72,7 +72,7 @@ class basic_bson_parser : public ser_context
     int mark_level_{0};
     
     Source source_;
-    bson_decode_options options_;
+    int max_nesting_depth_;
     std::vector<uint8_t,byte_allocator_type> bytes_buffer_;
     string_type name_buffer_;
     string_type text_buffer_;
@@ -81,9 +81,9 @@ public:
     template <typename Sourceable>
     basic_bson_parser(Sourceable&& source,
                       const bson_decode_options& options = bson_decode_options(),
-                      const TempAllocator& temp_alloc = TempAllocator())
+                      const TempAlloc& temp_alloc = TempAlloc())
        : source_(std::forward<Sourceable>(source)), 
-         options_(options),
+         max_nesting_depth_(options.max_nesting_depth()),
          bytes_buffer_(temp_alloc),
          name_buffer_(temp_alloc),
          text_buffer_(temp_alloc),
@@ -248,7 +248,7 @@ private:
 
     void begin_document(json_visitor& visitor, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(static_cast<int>(state_stack_.size()) > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(static_cast<int>(state_stack_.size()) > max_nesting_depth_))
         {
             ec = bson_errc::max_nesting_depth_exceeded;
             more_ = false;
@@ -294,7 +294,7 @@ private:
 
     void begin_array(json_visitor& visitor, std::error_code& ec)
     {
-        if (JSONCONS_UNLIKELY(static_cast<int>(state_stack_.size()) > options_.max_nesting_depth()))
+        if (JSONCONS_UNLIKELY(static_cast<int>(state_stack_.size()) > max_nesting_depth_))
         {
             ec = bson_errc::max_nesting_depth_exceeded;
             more_ = false;

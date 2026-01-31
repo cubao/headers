@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -27,6 +27,12 @@
 
 namespace jsoncons {
 namespace ext_traits {
+  
+    template <typename T>
+    struct is_std_pair : public std::false_type {};
+
+    template <typename S, typename T>
+    struct is_std_pair<std::pair<S, T> > : public std::true_type {};
 
     // is_char8
     template <typename CharT,typename Enable=void>
@@ -90,7 +96,8 @@ namespace ext_traits {
         static constexpr bool is_signed = std::numeric_limits<T>::is_signed;
         static constexpr int digits =  std::numeric_limits<T>::digits;
         static constexpr std::size_t buffer_size = static_cast<std::size_t>(sizeof(T)*CHAR_BIT*0.302) + 3;
-
+        static constexpr int digits10 = std::numeric_limits<T>::digits10;
+        
         static constexpr T(max)() noexcept
         {
             return (std::numeric_limits<T>::max)();
@@ -113,6 +120,7 @@ namespace ext_traits {
         static constexpr bool is_signed = true;
         static constexpr int digits =  sizeof(T)*CHAR_BIT - 1;
         static constexpr std::size_t buffer_size = (sizeof(T)*CHAR_BIT*0.302) + 3;
+        static constexpr int digits10 = 38;
 
         static constexpr T(max)() noexcept
         {
@@ -135,6 +143,7 @@ namespace ext_traits {
         static constexpr bool is_specialized = true;
         static constexpr bool is_signed = false;
         static constexpr int digits =  sizeof(T)*CHAR_BIT;
+        static constexpr int digits10 = 38;
 
         static constexpr T(max)() noexcept
         {
@@ -450,6 +459,26 @@ namespace ext_traits {
     using
     container_push_back_t = decltype(std::declval<Container>().push_back(std::declval<typename Container::value_type>()));
 
+    template <typename Optional>
+    using
+    optional_has_value_t = decltype(std::declval<Optional>().has_value());
+
+    template <typename T>
+    using
+    value_type_t = typename T::value_type;
+
+    template <typename Optional>
+    using
+    optional_value_t = decltype(std::declval<Optional>().value());
+
+    template <typename Optional>
+    using
+    optional_operator_star_t = decltype(std::declval<Optional>().operator *());
+
+    template <typename Optional>
+    using
+    optional_operator_bool_t = decltype(std::declval<Optional>().operator bool());
+
     template <typename Container>
     using
     container_push_front_t = decltype(std::declval<Container>().push_front(std::declval<typename Container::value_type>()));
@@ -535,21 +564,6 @@ namespace ext_traits {
     template <typename E, std::size_t N>
     struct is_std_array<std::array<E, N>> : std::true_type {};
 
-    // is_array_like
-
-    template <typename T,typename Enable=void>
-    struct is_array_like : std::false_type {};
-
-    template <typename T>
-    struct is_array_like<T, 
-                          typename std::enable_if<is_detected<container_value_type_t,T>::value &&
-                                                  is_detected<container_allocator_type_t,T>::value &&
-                                                  !is_std_array<T>::value && 
-                                                  !is_detected_exact<typename T::value_type,container_char_traits_t,T>::value &&
-                                                  !is_map_like<T>::value 
-    >::type> 
-        : std::true_type {};
-
     // is_constructible_from_const_pointer_and_size
 
     template <typename T,typename Enable=void>
@@ -572,6 +586,32 @@ namespace ext_traits {
     template <typename Container>
     using
     is_back_insertable = is_detected<container_push_back_t, Container>;
+
+    template <typename T>
+    using
+    has_has_value = is_detected_exact<bool, optional_has_value_t, T>;
+
+    template <typename T>
+    using
+    has_value_type = is_detected<value_type_t, T>;
+
+    template <typename T>
+    using
+    has_value = is_detected<optional_value_t, T>;
+
+    template <typename T>
+    using
+    has_operator_star = is_detected<optional_operator_star_t, T>;
+
+    template <typename T>
+    using
+    has_operator_bool = is_detected_exact<bool, optional_operator_bool_t, T>;
+
+    template <typename T>
+    struct is_optional
+    {
+        static constexpr bool value = has_value_type<T>::value && has_has_value<T>::value && has_value<T>::value && has_operator_bool<T>::value && has_operator_star<T>::value;
+    };
 
     // is_front_insertable
 
@@ -607,6 +647,33 @@ namespace ext_traits {
     struct has_data_and_size
     {
         static constexpr bool value = has_data<Container>::value && has_size<Container>::value;
+    };
+
+    // is_array_like
+
+    template <typename T,typename Enable=void>
+    struct is_array_like : std::false_type {};
+
+    template <typename T>
+    struct is_array_like<T, 
+        typename std::enable_if<is_detected<container_value_type_t,T>::value &&
+                                is_detected<container_allocator_type_t,T>::value &&
+                                !is_std_array<T>::value && 
+                                !is_detected_exact<typename T::value_type,container_char_traits_t,T>::value &&
+                                !is_map_like<T>::value 
+    >::type> 
+        : std::true_type {};
+
+    template <typename Container>
+    struct is_array_like_with_size
+    {
+        static constexpr bool value = is_array_like<Container>::value && has_size<Container>::value;
+    };
+
+    template <typename Container>
+    struct is_array_like_without_size
+    {
+        static constexpr bool value = is_array_like<Container>::value && !has_size<Container>::value;
     };
 
     // is_byte_sequence
@@ -707,8 +774,8 @@ namespace impl {
                                  std::is_same<typename std::decay<typename T::value_type>::type,int16_t>::value ||
                                  std::is_same<typename std::decay<typename T::value_type>::type,int32_t>::value ||
                                  std::is_same<typename std::decay<typename T::value_type>::type,int64_t>::value ||
-                                 std::is_same<typename std::decay<typename T::value_type>::type,float_t>::value ||
-                                 std::is_same<typename std::decay<typename T::value_type>::type,double_t>::value)>::type
+                                 std::is_same<typename std::decay<typename T::value_type>::type,float>::value ||
+                                 std::is_same<typename std::decay<typename T::value_type>::type,double>::value)>::type
     > : std::true_type{};
 
 } // namespace impl
@@ -726,7 +793,7 @@ namespace impl {
     <
         Container, Element, 
         typename std::enable_if<has_data<Container>::value>::type>
-            : std::is_convertible< typename std::remove_pointer<decltype(std::declval<Container>().data() )>::type(*)[], Element(*)[]>
+            : std::is_convertible< typename std::remove_pointer<decltype(std::declval<Container>().data())>::type(*)[], Element(*)[]>
     {};
 
     template <typename T>

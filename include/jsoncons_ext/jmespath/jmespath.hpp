@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Daniel Parker
+// Copyright 2013-2026 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -23,7 +23,7 @@
 #include <map>
 
 #include <jsoncons/config/compiler_support.hpp>
-#include <jsoncons/detail/parse_number.hpp>
+#include <jsoncons/utility/read_number.hpp>
 #include <jsoncons/json_decoder.hpp>
 #include <jsoncons/json_reader.hpp>
 #include <jsoncons/json_type.hpp>
@@ -1300,13 +1300,13 @@ namespace detail {
                 reference arg0 = args[0].value();
                 switch (arg0.type())
                 {
-                    case json_type::uint64_value:
+                    case json_type::uint64:
                         return arg0;
-                    case json_type::int64_value:
+                    case json_type::int64:
                     {
                         return arg0.template as<int64_t>() >= 0 ? arg0 : *context.create_json(std::abs(arg0.template as<int64_t>()));
                     }
-                    case json_type::double_value:
+                    case json_type::float64:
                     {
                         return arg0.template as<double>() >= 0 ? arg0 : *context.create_json(std::abs(arg0.template as<double>()));
                     }
@@ -1384,12 +1384,12 @@ namespace detail {
                 reference arg0 = args[0].value();
                 switch (arg0.type())
                 {
-                    case json_type::uint64_value:
-                    case json_type::int64_value:
+                    case json_type::uint64:
+                    case json_type::int64:
                     {
                         return *context.create_json(arg0.template as<double>());
                     }
-                    case json_type::double_value:
+                    case json_type::float64:
                     {
                         return *context.create_json(std::ceil(arg0.template as<double>()));
                     }
@@ -1424,7 +1424,7 @@ namespace detail {
 
                 switch (arg0.type())
                 {
-                    case json_type::array_value:
+                    case json_type::array:
                         for (auto& j : arg0.array_range())
                         {
                             if (j == arg1)
@@ -1433,7 +1433,7 @@ namespace detail {
                             }
                         }
                         return context.false_value();
-                    case json_type::string_value:
+                    case json_type::string:
                     {
                         if (!arg1.is_string())
                         {
@@ -1520,12 +1520,12 @@ namespace detail {
                 reference arg0 = args[0].value();
                 switch (arg0.type())
                 {
-                    case json_type::uint64_value:
-                    case json_type::int64_value:
+                    case json_type::uint64:
+                    case json_type::int64:
                     {
                         return *context.create_json(arg0.template as<double>());
                     }
-                    case json_type::double_value:
+                    case json_type::float64:
                     {
                         return *context.create_json(std::floor(arg0.template as<double>()));
                     }
@@ -1617,10 +1617,10 @@ namespace detail {
 
                 switch (arg0.type())
                 {
-                    case json_type::object_value:
-                    case json_type::array_value:
+                    case json_type::object:
+                    case json_type::array:
                         return *context.create_json(arg0.size());
-                    case json_type::string_value:
+                    case json_type::string:
                     {
                         auto sv0 = arg0.template as<string_view_type>();
                         auto length = unicode_traits::count_codepoints(sv0.data(), sv0.size());
@@ -1989,17 +1989,17 @@ namespace detail {
 
                 switch (arg0.type())
                 {
-                    case json_type::int64_value:
-                    case json_type::uint64_value:
-                    case json_type::double_value:
+                    case json_type::int64:
+                    case json_type::uint64:
+                    case json_type::float64:
                         return context.number_type_name();
-                    case json_type::bool_value:
+                    case json_type::boolean:
                         return context.boolean_type_name();
-                    case json_type::string_value:
+                    case json_type::string:
                         return context.string_type_name();
-                    case json_type::object_value:
+                    case json_type::object:
                         return context.object_type_name();
-                    case json_type::array_value:
+                    case json_type::array:
                         return context.array_type_name();
                     default:
                         return context.null_type_name();
@@ -2210,7 +2210,7 @@ namespace detail {
                 reference arg0 = args[0].value();
                 switch (arg0.type())
                 {
-                    case json_type::string_value:
+                    case json_type::string:
                     {
                         string_view_type sv = arg0.as_string_view();
                         std::basic_string<char32_t> buf;
@@ -2220,7 +2220,7 @@ namespace detail {
                         unicode_traits::convert(buf.data(), buf.size(), s);
                         return *context.create_json(s);
                     }
-                    case json_type::array_value:
+                    case json_type::array:
                     {
                         auto result = context.create_json(arg0);
                         std::reverse(result->array_range().begin(),result->array_range().end());
@@ -2371,33 +2371,33 @@ namespace detail {
                 reference arg0 = args[0].value();
                 switch (arg0.type())
                 {
-                    case json_type::int64_value:
-                    case json_type::uint64_value:
-                    case json_type::double_value:
+                    case json_type::int64:
+                    case json_type::uint64:
+                    case json_type::float64:
                         return arg0;
-                    case json_type::string_value:
+                    case json_type::string:
                     {
                         auto sv = arg0.as_string_view();
                         uint64_t uval{ 0 };
-                        auto result1 = jsoncons::detail::to_integer(sv.data(), sv.length(), uval);
+                        auto result1 = jsoncons::to_integer(sv.data(), sv.length(), uval);
                         if (result1)
                         {
                             return *context.create_json(uval);
                         }
                         int64_t sval{ 0 };
-                        auto result2 = jsoncons::detail::to_integer(sv.data(), sv.length(), sval);
+                        auto result2 = jsoncons::to_integer(sv.data(), sv.length(), sval);
                         if (result2)
                         {
                             return *context.create_json(sval);
                         }
-                        const jsoncons::detail::chars_to to_double;
-                        try
+                        auto s = arg0.as_string();
+                        double d{0};
+                        auto result3 = jsoncons::decstr_to_double(s.c_str(), s.length(), d);
+                        if (result3)
                         {
-                            auto s = arg0.as_string();
-                            double d = to_double(s.c_str(), s.length());
                             return *context.create_json(d);
                         }
-                        catch (const std::exception&)
+                        else
                         {
                             return context.null_value();
                         }
@@ -2999,6 +2999,16 @@ namespace detail {
             {
                 if (!val.is_array())
                 {
+                    eval_context<Json> new_context{ context.temp_storage_, context.variables_ };
+                    Json j(json_const_pointer_arg, evaluate_tokens(val, token_list_, new_context, ec));
+                    if (is_true(j))
+                    {
+                        reference jj = this->apply_expressions(val, context, ec);
+                        if (!jj.is_null())
+                        {
+                            return jj;
+                        }
+                    }
                     return context.null_value();
                 }
                 auto result = context.create_json(json_array_arg);
@@ -3435,7 +3445,7 @@ namespace detail {
         std::size_t line_{1};
         std::size_t column_{1};
         const char_type* begin_input_{nullptr};
-        const char_type* end_input_{nullptr};
+        const char_type* input_end_{nullptr};
         const char_type* p_{nullptr};
         std::vector<token<Json>> operator_stack_;
 
@@ -3473,13 +3483,13 @@ namespace detail {
             uint32_t cp2 = 0;
      
             begin_input_ = path;
-            end_input_ = path + length;
+            input_end_ = path + length;
             p_ = begin_input_;
 
             slice slic{};
 
             bool done = false;
-            while (p_ < end_input_ && !done)
+            while (p_ < input_end_ && !done)
             {
                 switch (state_stack.back())
                 {
@@ -3819,7 +3829,7 @@ namespace detail {
                             ++p_;
                             ++column_;
                         }
-                        else if (*p_ == 'i' && (p_ + 1) < end_input_ && *(p_ + 1) == 'n')
+                        else if (*p_ == 'i' && (p_ + 1) < input_end_ && *(p_ + 1) == 'n')
                         {
                             p_ += 2;
                             column_ += 2;
@@ -3925,7 +3935,7 @@ namespace detail {
                                 // check no-args function
                                 bool is_no_args_func = true;
                                 bool isEnd = false;
-                                for (const char_type *p2_ = p_ + 1; p2_ < end_input_ && !isEnd; ++p2_)
+                                for (const char_type *p2_ = p_ + 1; p2_ < input_end_ && !isEnd; ++p2_)
                                 {
                                     
                                     switch (*p2_)
@@ -4307,7 +4317,7 @@ namespace detail {
                                 break;
                             }
                             case '\\':
-                                if (p_+1 < end_input_)
+                                if (p_+1 < input_end_)
                                 {
                                     ++p_;
                                     ++column_;
@@ -4407,7 +4417,7 @@ namespace detail {
                         switch(*p_)
                         {
                             case '*':
-                                if (p_+1 >= end_input_)
+                                if (p_+1 >= input_end_)
                                 {
                                     ec = jmespath_errc::unexpected_end_of_input;
                                     return jmespath_expression{};
@@ -4498,7 +4508,7 @@ namespace detail {
                                 else
                                 {
                                     int64_t val{ 0 };
-                                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), val);
+                                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), val);
                                     if (!r)
                                     {
                                         ec = jmespath_errc::invalid_number;
@@ -4519,7 +4529,7 @@ namespace detail {
                                 if (!buffer.empty())
                                 {
                                     int64_t val{};
-                                    auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), val);
+                                    auto r = jsoncons::to_integer(buffer.data(), buffer.size(), val);
                                     if (!r)
                                     {
                                         ec = jmespath_errc::invalid_number;
@@ -4544,7 +4554,7 @@ namespace detail {
                         if (!buffer.empty())
                         {
                             int64_t val{ 0 };
-                            auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), val);
+                            auto r = jsoncons::to_integer(buffer.data(), buffer.size(), val);
                             if (!r)
                             {
                                 ec = jmespath_errc::invalid_number;
@@ -4580,7 +4590,7 @@ namespace detail {
                         if (!buffer.empty())
                         {
                             int64_t val{ 0 };
-                            auto r = jsoncons::detail::to_integer(buffer.data(), buffer.size(), val);
+                            auto r = jsoncons::to_integer(buffer.data(), buffer.size(), val);
                             if (!r)
                             {
                                 ec = jmespath_errc::invalid_number;
@@ -5025,7 +5035,7 @@ namespace detail {
                     ++column_;
                     break;
                 case '\r':
-                    if (p_+1 < end_input_)
+                    if (p_+1 < input_end_)
                     {
                         if (*(p_ + 1) == '\n')
                             ++p_;
