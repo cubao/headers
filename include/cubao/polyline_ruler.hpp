@@ -664,7 +664,8 @@ struct PolylineRuler
         }
         double minDist = std::numeric_limits<double>::infinity();
         Eigen::Vector3d minP(0.0, 0.0, 0.0);
-        double minI = 0., minT = 0.;
+        int minI = 0;
+        double minT = 0.0;
         for (int i = 0; i < N - 1; ++i) {
             double t = 0.;
             Eigen::Vector3d ab = line.row(i + 1) - line.row(i);
